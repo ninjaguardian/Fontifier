@@ -1,6 +1,11 @@
-﻿namespace Fontifier
+﻿using MelonLoader;
+
+namespace Fontifier
 {
-    public class Fontifier
+    /// <summary>
+    /// Lets you change the font for other mods.
+    /// </summary>
+    public class Fontifier : MelonMod
     {
 
     }
