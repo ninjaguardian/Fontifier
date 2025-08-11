@@ -1,0 +1,383 @@
+name: Build, Release, and Version Check
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [ "master" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from manifest
+        shell: bash
+        run: |
+          version_number=$(jq -r '.version_number' manifest.json)
+          echo "VERSIONNUM=$version_number" >> $GITHUB_ENV
+          echo "Version number is $version_number"
+
+      - name: Check .csproj
+        shell: bash
+        run: |
+          version_number=$(awk -F'[<>]' '/<VersionPrefix>/ {print $3}' Fontifier/Fontifier.csproj)
+          if [ "$version_number" != "$VERSIONNUM" ]; then
+            echo "Error: got version $version_number, expected $VERSIONNUM"
+            exit 1
+          fi
+
+      - name: Check .cs
+        shell: bash
+        run: |
+          version_number=$(awk -F'"' '/MelonInfo/ {print $4; exit}' Fontifier/Fontifier.cs)
+          if [ "$version_number" != "$VERSIONNUM" ]; then
+            echo "Error: got version $version_number, expected $VERSIONNUM"
+            exit 1
+          fi
+
+      - name: Check changelog
+        shell: bash
+        run: |
+          if [ "$(head -n 1 CHANGELOG.md)" != "# v$VERSIONNUM" ]; then
+            echo "Error: first line of CHANGELOG.md is not '# v$VERSIONNUM'"
+            exit 1
+          fi
+
+      - name: Check tag
+        shell: bash
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version_number="${GITHUB_REF#refs/tags/v}"
+          if [ "$version_number" != "$VERSIONNUM" ]; then
+            echo "Error: got version $version_number, expected $VERSIONNUM"
+            exit 1
+          fi
+
+  build:
+    runs-on: windows-latest
+
+    outputs:
+      dllversion: ${{ steps.setversion.outputs.dllversion }}
+
+    env:
+      LIBSDIRPATH: ${{ github.workspace }}\deps
+        
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get deps hash
+        shell: pwsh
+        run: |
+          $dependencies = (Get-Content manifest.json | ConvertFrom-Json).dependencies -join "`n"
+          $bytes = [System.Text.Encoding]::UTF8.GetBytes($dependencies)
+          $memoryStream = [System.IO.MemoryStream]::new($bytes)
+          $hash = Get-FileHash -InputStream $memoryStream -Algorithm SHA256
+          $lowerhash = $hash.Hash.ToLower()
+          Write-Output "DEPSHASH=$lowerhash" >> $env:GITHUB_ENV
+          Write-Host "DEPSHASH=$lowerhash"
+          Write-Host "Dependencies:`n$dependencies"
+
+      - name: Restore Thunderstore deps cache
+        if: ${{ env.DEPSHASH != '' }}
+        id: cache-deps
+        uses: actions/cache/restore@v4
+        with:
+          key: thunderstore-deps-${{ env.DEPSHASH }}
+          path: deps
+
+      - name: Download dependencies
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $deps = (Get-Content manifest.json | ConvertFrom-Json).dependencies
+          New-Item -ItemType Directory -Force -Path deps | Out-Null
+          foreach ($dep in $deps) {
+            $parts = $dep -split '-'
+            $user = $parts[0]; $pkg = $parts[1]; $ver = $parts[2]
+            $url = "https://thunderstore.io/package/download/$user/$pkg/$ver"
+            $out = "deps\$($user)-$($pkg)-$($ver).zip"
+            Write-Host "Fetching $url → $out"
+            Invoke-WebRequest -Uri $url -OutFile $out
+          }
+
+      - name: Unzip dependencies
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          Get-ChildItem deps\*.zip | ForEach-Object {
+            $zip = $_.FullName
+            Write-Host "Extracting $zip"
+            Expand-Archive -Path $zip -DestinationPath deps -Force
+          }
+
+      - name: Clean files in deps
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $removedFiles = Get-ChildItem -Path "deps" -File | Where-Object { $_.Name -ne "version.dll" }
+          foreach ($file in $removedFiles) {
+            Write-Host "Removing file: $($file.FullName)"
+            Remove-Item -Path $file.FullName -Force
+          }
+
+      - name: Save Thunderstore deps cache
+        if: ${{ env.DEPSHASH != '' && steps.cache-deps.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          key: thunderstore-deps-${{ env.DEPSHASH }}
+          path: deps
+
+      - name: Download steamcmd
+        shell: pwsh
+        run: |
+          $steamcmdUrl = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip"
+          $steamcmdZip = "steamcmd.zip"
+          Write-Host "Downloading steamcmd from $steamcmdUrl"
+          Invoke-WebRequest -Uri $steamcmdUrl -OutFile $steamcmdZip
+          Write-Host "Extracting steamcmd"
+          Expand-Archive -Path $steamcmdZip -DestinationPath . -Force
+
+      - name: Install steamcmd
+        shell: pwsh
+        run: |
+          .\steamcmd.exe +quit
+          $code = $LASTEXITCODE
+          if ($code -eq 7) {
+            Write-Host "SteamCMD returned exit code 7 (ignoring)."
+            $code = 0
+          }
+          exit $code
+
+      - name: Get RUMBLE version
+        shell: pwsh
+        run: |
+          $output = .\steamcmd.exe +login anonymous +app_info_print 890550 +quit
+
+          $branchesIndex = -1
+          for ($i = 0; $i -lt $output.Count; $i++) {
+            if ($output[$i] -match '^\s*"branches"\s*$') { $branchesIndex = $i; break }
+          }
+          if ($branchesIndex -lt 0) {
+            Write-Error "Failed to retrieve RUMBLE version."
+            Write-Error "No '\"branches\"' block found."
+            Write-Host "Output from steamcmd:`n$output"
+            exit 1
+          }
+
+          $publicIndex = -1
+          for ($i = $branchesIndex + 1; $i -lt $output.Count; $i++) {
+            if ($output[$i] -match '^\s*"public"\s*$') { $publicIndex = $i; break }
+            if ($output[$i] -match '^\s*\}') { break }
+          }
+          if ($publicIndex -lt 0) {
+            Write-Error "Failed to retrieve RUMBLE version."
+            Write-Error "No '\"public\"' branch found inside '\"branches\"'."
+            Write-Host "Output from steamcmd:`n$output"
+            exit 1
+          }
+
+          $buildidLine = $null
+          for ($i = $publicIndex + 1; $i -lt $output.Count; $i++) {
+            if ($output[$i] -match '^\s*"buildid"\s*"[^"]*"\s*$') { $buildidLine = $output[$i]; break }
+            if ($output[$i] -match '^\s*\}') { break }
+          }
+          if ($buildidLine -eq $null) {
+            Write-Error "Failed to retrieve RUMBLE version."
+            Write-Error "No buildid found inside '\"public\"' branch."
+            Write-Host "Output from steamcmd:`n$output"
+            exit 1
+          }
+
+          $buildid = $buildidLine -replace '.*"buildid"\s+"(\d+)".*', '$1'
+          Write-Output "RUMBLEVER=$buildid" >> $env:GITHUB_ENV
+          Write-Host "RUMBLEVER=$buildid"
+          if (-not $buildid) {
+            Write-Error "Failed to retrieve RUMBLE version."
+            Write-Error "Could not extract buildid from line: $buildidLine"
+            Write-Host "Output from steamcmd:`n$output"
+          }
+
+      - name: Get MelonLoader version
+        shell: pwsh
+        run: |
+          $melon_ver = ((Get-Content manifest.json | ConvertFrom-Json).dependencies | Where-Object { $_ -match 'MelonLoader' }) -replace '.*-',''
+          Write-Output "MELONLOADERVER=$melon_ver" >> $env:GITHUB_ENV
+          Write-Host "MELONLOADERVER=$melon_ver"
+
+      - name: Restore il2cpp cache
+        id: cache-il2cpp
+        if: ${{ env.RUMBLEVER != '' && env.MELONLOADERVER != '' }}
+        uses: actions/cache/restore@v4
+        with:
+          key: il2cpp-${{ env.RUMBLEVER }}-${{ env.MELONLOADERVER }}
+          path: deps\MelonLoader\Il2CppAssemblies
+
+      - name: Decode Steam config
+        if: steps.cache-il2cpp.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $content = @"
+          ${{ secrets.STEAM_CERTIFICATE }}
+          "@
+          $content | Out-File -Encoding ascii steamconfig.b64
+          if (Test-Path "config\config.vdf") { Remove-Item "config\config.vdf" -Force }
+          certutil -decode steamconfig.b64 config\config.vdf
+
+      - name: Setup install dir
+        if: steps.cache-il2cpp.outputs.cache-hit != 'true'
+        shell: cmd
+        run: steamcmd +force_install_dir .\deps\ +login ${{ secrets.STEAM_USERNAME }} +app_update 890550 validate +quit
+
+      - name: Run EXE until folder exists
+        if: steps.cache-il2cpp.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $folderPath = "deps\MelonLoader\Il2CppAssemblies\"
+
+          Start-Process -FilePath "deps\RUMBLE.exe"
+
+          $timeout = 600
+          $elapsed = 0
+          while (-not (Test-Path $folderPath) -and $elapsed -lt $timeout) {
+            Start-Sleep -Seconds 1
+            $elapsed++
+          }
+
+          if (-not (Test-Path $folderPath)) {
+            Write-Error "Timed out waiting for folder: $folderPath"
+            exit 1
+          } else {
+            Start-Sleep -Seconds 10
+          }
+
+      - name: Save il2cpp cache
+        if: ${{ env.RUMBLEVER != '' && env.MELONLOADERVER != '' && steps.cache-il2cpp.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          key: il2cpp-${{ env.RUMBLEVER }}-${{ env.MELONLOADERVER }}
+          path: deps\MelonLoader\Il2CppAssemblies
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+        
+      # - name: Update & clean workloads (Only run if needed)
+      #   continue-on-error: true
+      #   run: |
+      #     dotnet workload list
+      #     dotnet workload update
+      #     dotnet workload clean
+
+      - name: Build
+        run: dotnet build --configuration Release --no-self-contained /p:LIBSDIRPATH=${{ env.LIBSDIRPATH }}
+      
+      - name: Test
+        run: dotnet test --configuration Release --no-build --no-restore --verbosity normal /p:LIBSDIRPATH=${{ env.LIBSDIRPATH }}
+
+      - name: Get version number
+        id: setversion
+        shell: pwsh
+        run: |
+          $version = (Get-Content manifest.json | ConvertFrom-Json).version_number
+          Write-Output "DLLVERSION=$version" >> $env:GITHUB_ENV
+          Write-Output "dllversion=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "DLLVERSION=$version"
+
+      - name: Artifact setup
+        if: ${{ env.DLLVERSION != '' }}
+        shell: pwsh
+        run: |
+          $binPath = "Fontifier\bin\x64\Release\net6.0-windows10.0.17763.0\win-x64\"
+          New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\Mods | Out-Null
+          Move-Item -Path $binPath\Fontifier.dll -Destination $binPath\artifactsetup\Mods
+          New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\UserData\Fontifier | Out-Null
+          #Download CRUMBLE font
+          Invoke-WebRequest -Uri https://drive.google.com/uc?id=10koiaqNuqS5EzcA5TqMzhGA8Gl1thTNz -OutFile $binPath\artifactsetup\UserData\Fontifier\font.otf
+          Copy-Item -Path CHANGELOG.md -Destination $binPath\artifactsetup
+          Copy-Item -Path README.md -Destination $binPath\artifactsetup
+          Copy-Item -Path icon.png -Destination $binPath\artifactsetup
+          Copy-Item -Path LICENSE.txt -Destination $binPath\artifactsetup
+          Copy-Item -Path manifest.json -Destination $binPath\artifactsetup
+          Write-Output "BINPATH=$binPath" >> $env:GITHUB_ENV
+          ls -R $binPath\artifactsetup
+
+      - name: Upload build artifact
+        if: ${{ env.DLLVERSION != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+         name: ninjaguardian-Fontifier-${{ env.DLLVERSION }}
+         path: ${{ env.BINPATH }}\artifactsetup
+
+  release:
+    needs: [build, check]
+    runs-on: ubuntu-latest
+    env:
+      DLLVERSION: ${{ needs.build.outputs.dllversion }}
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ninjaguardian-Fontifier-${{ env.DLLVERSION }}
+          path: artifact-download
+
+      - name: Zip artifact
+        shell: pwsh
+        run: |
+          Compress-Archive -Path artifact-download\* -DestinationPath ninjaguardian-Fontifier-${{ env.DLLVERSION }}.zip
+
+      - name: Extract changelog for release
+        shell: pwsh
+        run: |
+          $version = "v${{ env.DLLVERSION }}"
+          $lines = Get-Content CHANGELOG.md
+
+          $startIndex = -1
+          for ($i = 0; $i -lt $lines.Length; $i++) {
+            if ($lines[$i] -match "^# $version") {
+              $startIndex = $i
+              break
+            }
+          }
+
+          if ($startIndex -eq -1) {
+            Write-Error "Version $version not found in CHANGELOG.md"
+            exit 1
+          }
+
+          $endIndex = -1
+          for ($j = $startIndex + 1; $j -lt $lines.Length; $j++) {
+            if ($lines[$j] -match "^# v") {
+              $endIndex = $j
+              break
+            }
+          }
+          if ($endIndex -eq -1) {
+            $endIndex = $lines.Length
+          }
+
+          $changelogLines = $lines[($startIndex+1)..($endIndex-1)] | Where-Object { $_ -ne "" }
+
+          $body = $changelogLines -join "`n"
+
+          Write-Output "body<<EOF" >> $env:GITHUB_ENV
+          Write-Output $body >> $env:GITHUB_ENV
+          Write-Output "EOF" >> $env:GITHUB_ENV
+          Write-Host "$body"
+
+      - name: Create GitHub Release and upload artifact
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ninjaguardian-Fontifier-${{ env.DLLVERSION }}.zip
+          body: ${{ env.body }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
