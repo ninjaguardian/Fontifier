@@ -73,6 +73,10 @@ namespace Fontifier
                 }
             }
             Mod.AddDescription("Fonts list", "Fonts list", string.Join("\n", fonts.Select(f => f.name)), new Tags { IsSummary = true });
+
+            Mod.GetFromFile();
+            UI.instance.AddMod(Mod);
+            MelonLogger.Msg("Fontifier added to ModUI.");
         }
     }
 }
