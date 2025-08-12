@@ -1,4 +1,6 @@
 ﻿using Fontifier;
+using Il2CppRUMBLE.Managers;
+using Il2CppRUMBLE.Players;
 using Il2CppTMPro;
 using MelonLoader;
 using RumbleModUI;
@@ -22,8 +24,6 @@ using UnityEngine.TextCore.LowLevel;
 [assembly: MelonPlatform(MelonPlatformAttribute.CompatiblePlatforms.WINDOWS_X64)]
 [assembly: MelonPlatformDomain(MelonPlatformDomainAttribute.CompatibleDomains.IL2CPP)]
 [assembly: VerifyLoaderVersion(0, 7, 0, true)]
-
-//[assembly: MelonPriority(5)]
 
 [assembly: MelonOptionalDependencies("HealthDisplayWithFont")]
 
@@ -159,7 +159,7 @@ namespace Fontifier
                 if (mod.Info.Name.Equals("HealthDisplayWithFont", StringComparison.OrdinalIgnoreCase))
                 {
                     Logger.Msg("HealthDisplayWithFont was found.");
-                    Mod.AddToList("HealthDisplayWithFont", "", "Enter a font from the Font List or leave it empty to use the default font.", new Tags()).SavedValueChanged += HealthDisplayWithFontChanged;
+                    Mod.AddToList("HealthDisplayWithFont", "", "Enter a font from the Font List or leave it empty to use the default font.", new Tags()).CurrentValueChanged += HealthDisplayWithFontChanged;
                     Mod.AddValidation("HealthDisplayWithFont", validator);
                 }
             }
@@ -167,6 +167,23 @@ namespace Fontifier
             Mod.GetFromFile();
             UI.instance.AddMod(Mod);
             Logger.Msg("Fontifier added to ModUI.");
+        }
+
+        private static void HealthDisplayWithFontSetAll(Type HealthDisplayWithFont, TMP_FontAsset font)
+        {
+            MethodInfo method = HealthDisplayWithFont.GetMethod("GetHealthbar", BindingFlags.Static | BindingFlags.NonPublic, null, new Type[] { typeof(Transform), typeof(ControllerType?) }, null);
+            if (method == null)
+            {
+                Logger.Warning("GetHealthbar method not found in HealthDisplayWithFont.");
+                return;
+            }
+            foreach (Player player in PlayerManager.instance.AllPlayers)
+            {
+                if (player.Controller is not { } controller) continue;
+                Transform uiTransform = method.Invoke(null, new object[] { controller.transform.Find("UI"), controller.controllerType }) as Transform;
+                TextMeshPro result = uiTransform?.Find("HealthText")?.GetComponent<TextMeshPro>();
+                if (result != null) result.font = font;
+            }
         }
 
         private static void HealthDisplayWithFontChanged(object sender, EventArgs args)
@@ -178,13 +195,15 @@ namespace Fontifier
                 return;
             }
 
-            FieldInfo fontAssetField = healthMod.GetType().GetField("fontAsset", BindingFlags.Static | BindingFlags.NonPublic);
+            Type modType = healthMod.GetType();
+            FieldInfo fontAssetField = modType.GetField("fontAsset", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
             if (fontAssetField != null)
             {
                 string modName = ((ValueChange<string>)args).Value;
                 if (string.IsNullOrWhiteSpace(modName))
                 {
                     fontAssetField.SetValue(null, null);
+                    HealthDisplayWithFontSetAll(modType, null);
                     return;
                 }
                 foreach (TMP_FontAsset font in fonts)
@@ -192,6 +211,7 @@ namespace Fontifier
                     if (font.name.Equals(modName, StringComparison.OrdinalIgnoreCase))
                     {
                         fontAssetField.SetValue(null, font);
+                        HealthDisplayWithFontSetAll(modType, font);
                         return;
                     }
                 }
