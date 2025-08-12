@@ -1,4 +1,5 @@
 ﻿using Fontifier;
+using HarmonyLib;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using Il2CppTMPro;
@@ -13,7 +14,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.TextCore.LowLevel;
 
-// TODO: Make ModUI show the fonts
+// TODO: Make ModUI show what the fonts look like.
 
 [assembly: MelonInfo(typeof(Fontifier.Fontifier), "Fontifier", FontifierModInfo.ModVer, "ninjaguardian", "https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier")]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
@@ -25,7 +26,8 @@ using UnityEngine.TextCore.LowLevel;
 [assembly: MelonPlatformDomain(MelonPlatformDomainAttribute.CompatibleDomains.IL2CPP)]
 [assembly: VerifyLoaderVersion(0, 7, 0, true)]
 
-[assembly: MelonOptionalDependencies("HealthDisplayWithFont")]
+[assembly: MelonOptionalDependencies("HealthDisplayWithFont", "tournamentScoring")]
+[assembly: HarmonyDontPatchAll]
 
 namespace Fontifier
 {
@@ -68,6 +70,7 @@ namespace Fontifier
     /// </summary>
     class Fontifier : MelonMod
     {
+        private const string ModDesc = "Enter a font from the Font List or leave it empty to use the default font.\n\nMake sure to hit enter!";
         /// <summary>
         /// The logger.
         /// </summary>
@@ -84,7 +87,7 @@ namespace Fontifier
             UI.instance.UI_Initialized += OnUIInitialized;
         }
 
-        private static void OnUIInitialized()
+        private void OnUIInitialized()
         {
             Mod.ModName = "Fontifier";
             Mod.ModVersion = FontifierModInfo.ModVer;
@@ -159,8 +162,17 @@ namespace Fontifier
                 if (mod.Info.Name.Equals("HealthDisplayWithFont", StringComparison.OrdinalIgnoreCase))
                 {
                     Logger.Msg("HealthDisplayWithFont was found.");
-                    Mod.AddToList("HealthDisplayWithFont", "", "Enter a font from the Font List or leave it empty to use the default font.", new Tags()).CurrentValueChanged += HealthDisplayWithFontChanged;
+                    Mod.AddToList("HealthDisplayWithFont", "", ModDesc, new Tags()).CurrentValueChanged += HealthDisplayWithFontChanged;
                     Mod.AddValidation("HealthDisplayWithFont", validator);
+                }
+                else if (mod.Info.Name.Equals("RUMBLE Tournament Scoring", StringComparison.OrdinalIgnoreCase))
+                {
+                    Logger.Msg("RUMBLE Tournament Scoring was found.");
+                    TournamentScoringFont = Mod.AddToList("RUMBLE Tournament Scoring", "", ModDesc, new Tags());
+                    TournamentScoringFont.CurrentValueChanged += TournamentScoringChanged;
+                    Mod.AddValidation("RUMBLE Tournament Scoring", validator);
+
+                    HarmonyInstance.Patch(TournamentScoringPatch.TargetMethod(), null, TournamentScoringPatch.GetPostfix());
                 }
             }
 
@@ -169,20 +181,31 @@ namespace Fontifier
             Logger.Msg("Fontifier added to ModUI.");
         }
 
-        private static void HealthDisplayWithFontSetAll(Type HealthDisplayWithFont, TMP_FontAsset font)
+        #region HealthDisplayWithFont
+        private static void HealthDisplayWithFontSetAll(Type healthDisplayType, TMP_FontAsset font)
         {
-            MethodInfo method = HealthDisplayWithFont.GetMethod("GetHealthbar", BindingFlags.Static | BindingFlags.NonPublic, null, new Type[] { typeof(Transform), typeof(ControllerType?) }, null);
+            MethodInfo method = healthDisplayType.GetMethod(
+                "GetHealthbar",
+                BindingFlags.Static | BindingFlags.NonPublic,
+                null,
+                new Type[] { typeof(Transform), typeof(ControllerType?) },
+                null
+            );
+
             if (method == null)
             {
                 Logger.Warning("GetHealthbar method not found in HealthDisplayWithFont.");
                 return;
             }
+
             foreach (Player player in PlayerManager.instance.AllPlayers)
             {
-                if (player.Controller is not { } controller) continue;
+                PlayerController controller = player.Controller;
+                if (controller == null) continue;
+
                 Transform uiTransform = method.Invoke(null, new object[] { controller.transform.Find("UI"), controller.controllerType }) as Transform;
-                TextMeshPro result = uiTransform?.Find("HealthText")?.GetComponent<TextMeshPro>();
-                if (result != null) result.font = font;
+                TextMeshPro tmp = uiTransform?.Find("HealthText")?.GetComponent<TextMeshPro>();
+                if (tmp != null) tmp.font = font;
             }
         }
 
@@ -196,31 +219,86 @@ namespace Fontifier
             }
 
             Type modType = healthMod.GetType();
-            FieldInfo fontAssetField = modType.GetField("fontAsset", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-            if (fontAssetField != null)
+            FieldInfo fontField = modType.GetField("fontAsset", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            if (fontField == null)
             {
-                string modName = ((ValueChange<string>)args).Value;
-                if (string.IsNullOrWhiteSpace(modName))
-                {
-                    fontAssetField.SetValue(null, null);
-                    HealthDisplayWithFontSetAll(modType, null);
-                    return;
-                }
-                foreach (TMP_FontAsset font in fonts)
-                {
-                    if (font.name.Equals(modName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        fontAssetField.SetValue(null, font);
-                        HealthDisplayWithFontSetAll(modType, font);
-                        return;
-                    }
-                }
-                Logger.Warning($"Font with name {modName} is not loaded.");
+                Logger.Warning("Field 'fontAsset' not found in HealthDisplayWithFont.");
+                return;
             }
-            else
+
+            string fontName = (args as ValueChange<string>)?.Value;
+            if (string.IsNullOrWhiteSpace(fontName))
             {
-                Logger.Warning("Field 'fontAsset' not found.");
+                fontField.SetValue(null, null);
+                HealthDisplayWithFontSetAll(modType, null);
+                return;
+            }
+
+            TMP_FontAsset font = fonts.FirstOrDefault(f => string.Equals(f.name, fontName, StringComparison.OrdinalIgnoreCase));
+            if (font == null)
+            {
+                Logger.Warning($"Font with name {fontName} is not loaded.");
+                return;
+            }
+
+            fontField.SetValue(null, font);
+            HealthDisplayWithFontSetAll(modType, font);
+        }
+        #endregion
+
+        #region RUMBLE Tournament Scoring
+        private static ModSetting<string> TournamentScoringFont;
+
+        class TournamentScoringPatch
+        {
+            public static MethodBase TargetMethod()
+            {
+                return RegisteredMelons.FirstOrDefault(m => m.Info.Name == "RUMBLE Tournament Scoring").GetType().GetMethod("SpawnScoreboard", BindingFlags.Instance | BindingFlags.NonPublic);
+            }
+
+            public static void Postfix(MelonMod __instance)
+            {
+                TournamentScoringChanged(__instance, TournamentScoringFont.Value as string);
+            }
+
+            public static HarmonyMethod GetPostfix()
+            {
+                return new HarmonyMethod(typeof(TournamentScoringPatch).GetMethod(nameof(Postfix)));
             }
         }
+
+        private static void TournamentScoringChanged(object sender, EventArgs args)
+        {
+            MelonMod tournamentScoringMod = RegisteredMelons.FirstOrDefault(m => m.Info.Name == "RUMBLE Tournament Scoring");
+            if (tournamentScoringMod == null)
+            {
+                Logger.Warning("RUMBLE Tournament Scoring mod not found.");
+                return;
+            }
+
+            TournamentScoringChanged(tournamentScoringMod, (args as ValueChange<string>)?.Value);
+        }
+
+        private static void TournamentScoringChanged(MelonMod tournamentScoringMod, string fontName)
+        {
+            if (tournamentScoringMod.GetType()
+                .GetField("scoreboardText", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.GetValue(tournamentScoringMod) is TextMeshPro scoreboardText
+                && scoreboardText != null)
+            {
+                if (string.IsNullOrWhiteSpace(fontName))
+                {
+                    scoreboardText.font = null;
+                    return;
+                }
+
+                TMP_FontAsset font = fonts.FirstOrDefault(f => string.Equals(f.name, fontName, StringComparison.OrdinalIgnoreCase));
+                if (font != null)
+                    scoreboardText.font = font;
+                else
+                    Logger.Warning($"Font with name {fontName} is not loaded.");
+            }
+        }
+        #endregion
     }
 }
