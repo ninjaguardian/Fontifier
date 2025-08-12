@@ -33,7 +33,14 @@
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
 		<WarningLevel>9999</WarningLevel>
 		<IsPublishable>False</IsPublishable>
+		<StartAction>Program</StartAction>
+		<StartProgram>$(LIBSDIRPATH)\RUMBLE.exe</StartProgram>
+		<StartWorkingDirectory>$(LIBSDIRPATH)</StartWorkingDirectory>
 	</PropertyGroup>
+
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;$(LIBSDIRPATH)\Mods\&quot;" />
+	</Target>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
 		<WarningLevel>9999</WarningLevel>
