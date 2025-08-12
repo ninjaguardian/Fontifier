@@ -48,21 +48,17 @@ namespace Fontifier
         /// <inheritdoc/>
         public override bool DoValidation(string Input)
         {
-            Fontifier.Logger.Warning(Input);
             if (string.IsNullOrWhiteSpace(Input))
             {
-                Fontifier.Logger.Warning("whitespace");
                 return true; // default font
             }
             foreach (TMP_FontAsset font in Fontifier.fonts)
             {
                 if (font.name.Equals(Input, StringComparison.OrdinalIgnoreCase))
                 {
-                    Fontifier.Logger.Warning(font.name);
                     return true;
                 }
             }
-            Fontifier.Logger.Warning("none");
             return false;
         }
     }
@@ -182,19 +178,24 @@ namespace Fontifier
                 return;
             }
 
-            Type modType = healthMod.GetType();
-
-            FieldInfo fontAssetField = modType.GetField("fontAsset", BindingFlags.Static | BindingFlags.NonPublic);
+            FieldInfo fontAssetField = healthMod.GetType().GetField("fontAsset", BindingFlags.Static | BindingFlags.NonPublic);
             if (fontAssetField != null)
             {
+                string modName = ((ValueChange<string>)args).Value;
+                if (string.IsNullOrWhiteSpace(modName))
+                {
+                    fontAssetField.SetValue(null, null);
+                    return;
+                }
                 foreach (TMP_FontAsset font in fonts)
                 {
-                    if (font.name.Equals(((ValueChange<string>)args).Value, StringComparison.OrdinalIgnoreCase))
+                    if (font.name.Equals(modName, StringComparison.OrdinalIgnoreCase))
                     {
                         fontAssetField.SetValue(null, font);
                         return;
                     }
                 }
+                Logger.Warning($"Font with name {modName} is not loaded.");
             }
             else
             {
