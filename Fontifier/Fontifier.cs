@@ -10,6 +10,8 @@ using UnityEngine;
 using UnityEngine.TextCore.LowLevel;
 using System.Drawing.Text;
 
+// TODO: Make ModUI show the fonts
+
 [assembly: MelonInfo(typeof(Fontifier.Fontifier), "Fontifier", FontifierModInfo.ModVer, "ninjaguardian", "https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier")]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
 
@@ -19,6 +21,10 @@ using System.Drawing.Text;
 [assembly: MelonPlatform(MelonPlatformAttribute.CompatiblePlatforms.WINDOWS_X64)]
 [assembly: MelonPlatformDomain(MelonPlatformDomainAttribute.CompatibleDomains.IL2CPP)]
 [assembly: VerifyLoaderVersion(0, 7, 0, true)]
+
+//[assembly: MelonPriority(5)]
+
+[assembly: MelonOptionalDependencies("HealthDisplayWithFont")]
 
 namespace Fontifier
 {
@@ -32,12 +38,49 @@ namespace Fontifier
         /// </summary>
         public const string ModVer = "1.0.0";
     }
+
+    /// <summary>
+    /// Makes sure it's a valid font name.
+    /// </summary>
+    public class FontNameValidator : ValidationParameters
+    {
+        private readonly Fontifier fontifier;
+        /// <summary>
+        /// Takes in a Fontifier MelonMod.
+        /// </summary>
+        public FontNameValidator(Fontifier fontifier)
+        {
+            this.fontifier = fontifier;
+        }
+
+        /// <inheritdoc/>
+        public override bool DoValidation(string Input)
+        {
+            if (string.IsNullOrWhiteSpace(Input))
+            {
+                return true; // default font
+            }
+            foreach (TMP_FontAsset font in fontifier.fonts)
+            {
+                if (font.name.Equals(Input, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
     /// <summary>
     /// Lets you change the font for other mods.
     /// </summary>
     public class Fontifier : MelonMod
     {
         readonly Mod Mod = new();
+        /// <summary>
+        /// All font names.
+        /// </summary>
+        public readonly List<TMP_FontAsset> fonts = new();
 
         /// <inheritdoc/>
         public override void OnLateInitializeMelon()
@@ -51,8 +94,8 @@ namespace Fontifier
             Mod.ModVersion = FontifierModInfo.ModVer;
             Mod.SetFolder("Fontifier");
             Mod.AddDescription("Description", "", "Lets you change the font for other mods.", new Tags { IsSummary = true });
-            List<TMP_FontAsset> fonts = new();
 
+            HashSet<string> existingNames = new(StringComparer.OrdinalIgnoreCase);
             foreach (string fontPath in
                 Directory.EnumerateFiles(@"UserData\Fontifier\fonts", "*.*", SearchOption.TopDirectoryOnly)
                 .Where(
@@ -63,7 +106,7 @@ namespace Fontifier
             {
                 try
                 {
-                    var loadedFont = TMP_FontAsset.CreateFontAsset(
+                    TMP_FontAsset loadedFont = TMP_FontAsset.CreateFontAsset(
                         fontPath,
                         0,
                         90,
@@ -74,19 +117,36 @@ namespace Fontifier
                     );
                     loadedFont.hideFlags = HideFlags.HideAndDontSave;
 
+                    string baseName;
                     try
                     {
-                        using var fontCollection = new PrivateFontCollection();
+                        using PrivateFontCollection fontCollection = new();
                         fontCollection.AddFontFile(fontPath);
-                        if (fontCollection.Families.Length > 0)
-                            loadedFont.name = fontCollection.Families[0].Name;
+                        if (fontCollection.Families.Length == 0 || string.IsNullOrWhiteSpace(fontCollection.Families[0].Name))
+                            throw new Exception("Font has no internal family name.");
+                        baseName = fontCollection.Families[0].Name;
                     }
                     catch (Exception ex)
                     {
-                        loadedFont.name = Path.GetFileNameWithoutExtension(fontPath);
+                        baseName = Path.GetFileNameWithoutExtension(fontPath);
                         MelonLogger.Warning($"Could not read internal font name for {fontPath}, using filename instead.", ex);
                     }
 
+                    if (string.IsNullOrWhiteSpace(baseName))
+                    {
+                        throw new Exception("Font has an invalid name/filename.");
+                    }
+
+                    string candidate = baseName;
+                    int suffix = 0;
+                    while (existingNames.Contains(candidate))
+                    {
+                        suffix++;
+                        candidate = $"{baseName} ({suffix})";
+                    }
+
+                    loadedFont.name = candidate;
+                    existingNames.Add(loadedFont.name);
                     fonts.Add(loadedFont);
                     MelonLogger.Msg($"Loaded font: {loadedFont.name} from {fontPath}");
                 }
@@ -96,6 +156,17 @@ namespace Fontifier
                 }
             }
             Mod.AddDescription("Fonts List", "", "The following fonts are loaded:\n" + string.Join("\n", fonts.Select(f => f.name)), new Tags { IsEmpty = true });
+
+            FontNameValidator validator = new(this);
+            foreach (MelonMod mod in RegisteredMelons)
+            {
+                if (mod.Info.Name.Equals("HealthDisplayWithFont", StringComparison.OrdinalIgnoreCase))
+                {
+                    MelonLogger.Msg("HealthDisplayWithFont was found.");
+                    Mod.AddToList("HealthDisplayWithFont", "", "Enter a font from the Font List or leave it empty to use the default font.", new Tags());
+                    Mod.AddValidation("HealthDisplayWithFont", validator);
+                }
+            }
 
             Mod.GetFromFile();
             UI.instance.AddMod(Mod);
