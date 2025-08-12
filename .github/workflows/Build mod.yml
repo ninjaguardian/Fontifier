@@ -22,7 +22,7 @@ jobs:
 
       - name: Get version from manifest
         id: setversion
-        shell: bash
+        shell: pwsh
         run: |
           $version = (Get-Content manifest.json | ConvertFrom-Json).version_number
           Write-Output "VERSIONNUM=$version" >> $env:GITHUB_ENV
