@@ -4,11 +4,12 @@ using MelonLoader;
 using RumbleModUI;
 using System;
 using System.Collections.Generic;
+using System.Drawing.Text;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.TextCore.LowLevel;
-using System.Drawing.Text;
 
 // TODO: Make ModUI show the fonts
 
@@ -31,7 +32,7 @@ namespace Fontifier
     /// <summary>
     /// Contains mod version.
     /// </summary>
-    public static class FontifierModInfo
+    static class FontifierModInfo
     {
         /// <summary>
         /// Mod version.
@@ -42,31 +43,26 @@ namespace Fontifier
     /// <summary>
     /// Makes sure it's a valid font name.
     /// </summary>
-    public class FontNameValidator : ValidationParameters
+    class FontNameValidator : ValidationParameters
     {
-        private readonly Fontifier fontifier;
-        /// <summary>
-        /// Takes in a Fontifier MelonMod.
-        /// </summary>
-        public FontNameValidator(Fontifier fontifier)
-        {
-            this.fontifier = fontifier;
-        }
-
         /// <inheritdoc/>
         public override bool DoValidation(string Input)
         {
+            Fontifier.Logger.Warning(Input);
             if (string.IsNullOrWhiteSpace(Input))
             {
+                Fontifier.Logger.Warning("whitespace");
                 return true; // default font
             }
-            foreach (TMP_FontAsset font in fontifier.fonts)
+            foreach (TMP_FontAsset font in Fontifier.fonts)
             {
                 if (font.name.Equals(Input, StringComparison.OrdinalIgnoreCase))
                 {
+                    Fontifier.Logger.Warning(font.name);
                     return true;
                 }
             }
+            Fontifier.Logger.Warning("none");
             return false;
         }
     }
@@ -74,13 +70,17 @@ namespace Fontifier
     /// <summary>
     /// Lets you change the font for other mods.
     /// </summary>
-    public class Fontifier : MelonMod
+    class Fontifier : MelonMod
     {
-        readonly Mod Mod = new();
+        /// <summary>
+        /// The logger.
+        /// </summary>
+        public static readonly MelonLogger.Instance Logger = new("Fontifier", System.Drawing.Color.FromArgb(255, 0, 160, 230));
+        private readonly static Mod Mod = new();
         /// <summary>
         /// All font names.
         /// </summary>
-        public readonly List<TMP_FontAsset> fonts = new();
+        public readonly static List<TMP_FontAsset> fonts = new();
 
         /// <inheritdoc/>
         public override void OnLateInitializeMelon()
@@ -88,7 +88,7 @@ namespace Fontifier
             UI.instance.UI_Initialized += OnUIInitialized;
         }
 
-        private void OnUIInitialized()
+        private static void OnUIInitialized()
         {
             Mod.ModName = "Fontifier";
             Mod.ModVersion = FontifierModInfo.ModVer;
@@ -129,7 +129,7 @@ namespace Fontifier
                     catch (Exception ex)
                     {
                         baseName = Path.GetFileNameWithoutExtension(fontPath);
-                        MelonLogger.Warning($"Could not read internal font name for {fontPath}, using filename instead.", ex);
+                        Logger.Warning($"Could not read internal font name for {fontPath}, using filename instead.", ex);
                     }
 
                     if (string.IsNullOrWhiteSpace(baseName))
@@ -148,29 +148,58 @@ namespace Fontifier
                     loadedFont.name = candidate;
                     existingNames.Add(loadedFont.name);
                     fonts.Add(loadedFont);
-                    MelonLogger.Msg($"Loaded font: {loadedFont.name} from {fontPath}");
+                    Logger.Msg($"Loaded font: {loadedFont.name} from {fontPath}");
                 }
                 catch (Exception ex)
                 {
-                    MelonLogger.Error($"Failed to load font from {fontPath}", ex);
+                    Logger.Error($"Failed to load font from {fontPath}", ex);
                 }
             }
             Mod.AddDescription("Fonts List", "", "The following fonts are loaded:\n" + string.Join("\n", fonts.Select(f => f.name)), new Tags { IsEmpty = true });
 
-            FontNameValidator validator = new(this);
+            FontNameValidator validator = new();
             foreach (MelonMod mod in RegisteredMelons)
             {
                 if (mod.Info.Name.Equals("HealthDisplayWithFont", StringComparison.OrdinalIgnoreCase))
                 {
-                    MelonLogger.Msg("HealthDisplayWithFont was found.");
-                    Mod.AddToList("HealthDisplayWithFont", "", "Enter a font from the Font List or leave it empty to use the default font.", new Tags());
+                    Logger.Msg("HealthDisplayWithFont was found.");
+                    Mod.AddToList("HealthDisplayWithFont", "", "Enter a font from the Font List or leave it empty to use the default font.", new Tags()).SavedValueChanged += HealthDisplayWithFontChanged;
                     Mod.AddValidation("HealthDisplayWithFont", validator);
                 }
             }
 
             Mod.GetFromFile();
             UI.instance.AddMod(Mod);
-            MelonLogger.Msg("Fontifier added to ModUI.");
+            Logger.Msg("Fontifier added to ModUI.");
+        }
+
+        private static void HealthDisplayWithFontChanged(object sender, EventArgs args)
+        {
+            MelonMod healthMod = RegisteredMelons.FirstOrDefault(m => m.Info.Name == "HealthDisplayWithFont");
+            if (healthMod == null)
+            {
+                Logger.Warning("HealthDisplayWithFont mod not found.");
+                return;
+            }
+
+            Type modType = healthMod.GetType();
+
+            FieldInfo fontAssetField = modType.GetField("fontAsset", BindingFlags.Static | BindingFlags.NonPublic);
+            if (fontAssetField != null)
+            {
+                foreach (TMP_FontAsset font in fonts)
+                {
+                    if (font.name.Equals(((ValueChange<string>)args).Value, StringComparison.OrdinalIgnoreCase))
+                    {
+                        fontAssetField.SetValue(null, font);
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                Logger.Warning("Field 'fontAsset' not found.");
+            }
         }
     }
 }
