@@ -19,7 +19,6 @@
 		<VersionPrefix>1.0.0</VersionPrefix>
 		<AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
 		<FileVersion>$(VersionPrefix).0</FileVersion>
-		<PackageIcon>iconlowres.png</PackageIcon>
 		<Platform>x64</Platform>
 		<Platforms>x64</Platforms>
 		<PlatformTarget>x64</PlatformTarget>
@@ -43,10 +42,6 @@
 
 	<ItemGroup>
 		<None Include="..\icon.png">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-		<None Include="..\iconlowres.png">
 			<Pack>True</Pack>
 			<PackagePath>\</PackagePath>
 		</None>
@@ -86,6 +81,9 @@
 		</Reference>
 		<Reference Include="MelonLoader">
 			<HintPath>$(LibsDirPath)\MelonLoader\net6\MelonLoader.dll</HintPath>
+		</Reference>
+		<Reference Include="ModUI">
+			<HintPath>$(LibsDirPath)\Mods\ModUI.dll</HintPath>
 		</Reference>
 		<Reference Include="Unity.TextMeshPro">
 			<HintPath>$(LibsDirPath)\MelonLoader\Il2CppAssemblies\Unity.TextMeshPro.dll</HintPath>

@@ -1,5 +1,5 @@
 # Fontifier
-![Photo](https://raw.githubusercontent.com/ninjaguardian/Fontifier/master/icon.png)
+![Photo](https://raw.githubusercontent.com/ninjaguardian/Fontifier/master/Fontifier.png)
 
 ## What is this
 This mod lets you change the font of other mods' text.
@@ -12,7 +12,7 @@ This mod lets you change the font of other mods' text.
 5. Play RUMBLE!
 
 ## Use your own font
-Take any .ttf or .otf font file and place it in the UserData\Fontifier folder. Then, use MODUI to select it.
+Take any .ttf or .otf font file and place it in the UserData\Fontifier\fonts folder. Then, use RumbleModUI to select it.
 
 ## Help And Other Resources
 Get help and find other resources in the [Modding Discord](https://discord.gg/fsbcnZgzfa)

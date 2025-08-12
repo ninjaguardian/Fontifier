@@ -4,6 +4,7 @@
     "website_url": "https://github.com/ninjaguardian/Fontifier",
     "description": "Lets you change the font for other mods.",
     "dependencies": [
-        "LavaGang-MelonLoader-0.7.0"
+        "LavaGang-MelonLoader-0.7.0",
+        "Baumritter-RumbleModUI-2.1.2"
     ]
 }
