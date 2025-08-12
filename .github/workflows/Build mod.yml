@@ -13,15 +13,21 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+
+    outputs:
+      dllversion: ${{ steps.setversion.outputs.dllversion }}
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Get version from manifest
+        id: setversion
         shell: bash
         run: |
-          version_number=$(jq -r '.version_number' manifest.json)
-          echo "VERSIONNUM=$version_number" >> $GITHUB_ENV
-          echo "Version number is $version_number"
+          $version = (Get-Content manifest.json | ConvertFrom-Json).version_number
+          Write-Output "VERSIONNUM=$version" >> $env:GITHUB_ENV
+          Write-Output "dllversion=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "DLLVERSION=$version"
 
       - name: Check .csproj
         shell: bash
@@ -60,13 +66,12 @@ jobs:
           fi
 
   build:
+    needs: [check]
     runs-on: windows-latest
-
-    outputs:
-      dllversion: ${{ steps.setversion.outputs.dllversion }}
 
     env:
       LIBSDIRPATH: ${{ github.workspace }}\deps
+      DLLVERSION: ${{ needs.check.outputs.dllversion }}
         
     steps:
       - uses: actions/checkout@v4
@@ -281,15 +286,6 @@ jobs:
       - name: Test
         run: dotnet test --configuration Release --no-build --no-restore --verbosity normal /p:LIBSDIRPATH=${{ env.LIBSDIRPATH }}
 
-      - name: Get version number
-        id: setversion
-        shell: pwsh
-        run: |
-          $version = (Get-Content manifest.json | ConvertFrom-Json).version_number
-          Write-Output "DLLVERSION=$version" >> $env:GITHUB_ENV
-          Write-Output "dllversion=$version" >> $env:GITHUB_OUTPUT
-          Write-Host "DLLVERSION=$version"
-
       - name: Artifact setup
         if: ${{ env.DLLVERSION != '' }}
         shell: pwsh
@@ -299,6 +295,14 @@ jobs:
           Move-Item -Path $binPath\Fontifier.dll -Destination $binPath\artifactsetup\Mods
           New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\UserData\Fontifier\fonts | Out-Null
           Invoke-WebRequest -Uri https://drive.google.com/uc?id=10koiaqNuqS5EzcA5TqMzhGA8Gl1thTNz -OutFile $binPath\artifactsetup\UserData\Fontifier\fonts\CRUMBLE.otf
+          $RumbleModUIVersion = jq -r '.dependencies[1] | split("-")[2]' manifest.json
+          Write-Output "RumbleModUIVersion=$RumbleModUIVersion"
+          Set-Content -Path "$binPath\artifactsetup\UserData\Fontifier\Settings.txt" -Value @(
+            "Fontifier ${{ env.DLLVERSION }}"
+            "Created by: $RumbleModUIVersion"
+            "HealthDisplayWithFont: CRUMBLE"
+            ""
+          )
           Copy-Item -Path CHANGELOG.md -Destination $binPath\artifactsetup
           Copy-Item -Path README.md -Destination $binPath\artifactsetup
           Copy-Item -Path icon.png -Destination $binPath\artifactsetup
@@ -315,10 +319,10 @@ jobs:
          path: ${{ env.BINPATH }}\artifactsetup
 
   release:
-    needs: [build, check]
+    needs: [check, build]
     runs-on: ubuntu-latest
     env:
-      DLLVERSION: ${{ needs.build.outputs.dllversion }}
+      DLLVERSION: ${{ needs.check.outputs.dllversion }}
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
