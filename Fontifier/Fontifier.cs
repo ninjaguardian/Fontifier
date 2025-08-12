@@ -36,7 +36,7 @@ namespace Fontifier
     /// </summary>
     public class Fontifier : MelonMod
     {
-        Mod Mod = new Mod();
+        readonly Mod Mod = new();
 
         /// <inheritdoc/>
         public override void OnLateInitializeMelon()
@@ -44,13 +44,13 @@ namespace Fontifier
             UI.instance.UI_Initialized += OnUIInitialized;
         }
 
-        public void OnUIInitialized()
+        private void OnUIInitialized()
         {
             Mod.ModName = "Fontifier";
             Mod.ModVersion = FontifierModInfo.ModVer;
             Mod.SetFolder("Fontifier");
             Mod.AddDescription("Description", "Description", "Lets you change the font for other mods.", new Tags { IsSummary = true });
-            List<TMP_FontAsset> fonts = new List<TMP_FontAsset>();
+            List<TMP_FontAsset> fonts = new();
             foreach (string fontPath in Directory.GetFiles(@"UserData\Fontifier\fonts"))
             {
                 try

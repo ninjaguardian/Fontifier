@@ -297,9 +297,8 @@ jobs:
           $binPath = "Fontifier\bin\x64\Release\net6.0-windows10.0.17763.0\win-x64\"
           New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\Mods | Out-Null
           Move-Item -Path $binPath\Fontifier.dll -Destination $binPath\artifactsetup\Mods
-          New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\UserData\Fontifier | Out-Null
-          #Download CRUMBLE font
-          Invoke-WebRequest -Uri https://drive.google.com/uc?id=10koiaqNuqS5EzcA5TqMzhGA8Gl1thTNz -OutFile $binPath\artifactsetup\UserData\Fontifier\font.otf
+          New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\UserData\Fontifier\fonts | Out-Null
+          Invoke-WebRequest -Uri https://drive.google.com/uc?id=10koiaqNuqS5EzcA5TqMzhGA8Gl1thTNz -OutFile $binPath\artifactsetup\UserData\Fontifier\fonts\CRUMBLE.otf
           Copy-Item -Path CHANGELOG.md -Destination $binPath\artifactsetup
           Copy-Item -Path README.md -Destination $binPath\artifactsetup
           Copy-Item -Path icon.png -Destination $binPath\artifactsetup
