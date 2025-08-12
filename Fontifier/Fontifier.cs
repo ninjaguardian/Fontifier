@@ -16,7 +16,7 @@ using UnityEngine.TextCore.LowLevel;
 [assembly: MelonInfo(typeof(Fontifier.Fontifier), "Fontifier", FontifierModInfo.ModVer, "ninjaguardian", "https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier")]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
 
-[assembly: MelonColor(255, 0, 222, 230)]
+[assembly: MelonColor(255, 0, 160, 230)]
 [assembly: MelonAuthorColor(255, 0, 160, 230)]
 
 [assembly: MelonPlatform(MelonPlatformAttribute.CompatiblePlatforms.WINDOWS_X64)]
