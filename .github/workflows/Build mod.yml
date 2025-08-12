@@ -35,7 +35,7 @@ jobs:
       - name: Check .cs
         shell: bash
         run: |
-          version_number=$(awk -F'"' '/ModVer/ {print $2; exit}' Fontifier/Fontifier.cs)
+          version_number=$(awk -F'"' '/ModVer *= *"/ {ver=$2} END {print ver}' Fontifier/Fontifier.cs)
           if [ "$version_number" != "$VERSIONNUM" ]; then
             echo "Error: got version $version_number, expected $VERSIONNUM"
             exit 1
