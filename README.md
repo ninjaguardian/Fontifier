@@ -11,8 +11,26 @@ This mod lets you change the font of other mods' text.
 4. Drop UserData from .zip into RUMBLE's installation folder
 5. Play RUMBLE!
 
-## Use your own font
-Take any .ttf or .otf font file and place it in the UserData\Fontifier\fonts folder. Then, use RumbleModUI to select it.
+## Supported mods
+| [HealthDisplayWithFont](https://thunderstore.io/c/rumble/p/ninjaguardian/HealthDisplayWithFont) | [TournamentScoringMod](https://thunderstore.io/c/rumble/p/davisgreenwell/TournamentScoringMod) |
+|--|--|
+| [![Photo](https://raw.githubusercontent.com/ninjaguardian/HealthDisplayWithFont/master/icon.png)](https://thunderstore.io/c/rumble/p/ninjaguardian/HealthDisplayWithFont) | [![Photo](https://gcdn.thunderstore.io/live/repository/icons/davisgreenwell-TournamentScoringMod-1.0.1.png)](https://thunderstore.io/c/rumble/p/davisgreenwell/TournamentScoringMod) |
+
+## Choose a font
+1. Move any .ttf or .otf fonts into UserData\Fontifier\fonts
+2. Press F10 to open Mod UI
+3. Go to Fontifier in the dropdown
+4. In the second dropdown, select 'Fonts List'
+5. Find the name of the font you want
+6. In the second dropdown, select any mod
+7. Type in the name of the font you want (case-insensitive) and hit enter
+8. If it looks good, hit save
+
+## I can't type in ModUI
+If you have UnityExplorer, hit F7 first. If not, ask the discord.
+
+## It's not saving
+Make sure to press enter and then hit save. If you are, ask the discord.
 
 ## Help And Other Resources
 Get help and find other resources in the [Modding Discord](https://discord.gg/fsbcnZgzfa)
