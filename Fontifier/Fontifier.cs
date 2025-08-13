@@ -17,7 +17,7 @@ using UnityEngine.TextCore.LowLevel;
 // TODO: Make ModUI show what the fonts look like.
 // TODO: Add stuff so other people can integrate this themselvs in their mod.
 
-[assembly: MelonInfo(typeof(Fontifier.Fontifier), "Fontifier", FontifierModInfo.ModVer, "ninjaguardian", "https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier")]
+[assembly: MelonInfo(typeof(Fontifier.Fontifier), FontifierModInfo.ModName, FontifierModInfo.ModVer, "ninjaguardian", "https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier")]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
 
 [assembly: MelonColor(255, 0, 160, 230)]
@@ -25,7 +25,7 @@ using UnityEngine.TextCore.LowLevel;
 
 [assembly: MelonPlatform(MelonPlatformAttribute.CompatiblePlatforms.WINDOWS_X64)]
 [assembly: MelonPlatformDomain(MelonPlatformDomainAttribute.CompatibleDomains.IL2CPP)]
-[assembly: VerifyLoaderVersion(0, 7, 0, true)]
+[assembly: VerifyLoaderVersion(FontifierModInfo.MLVersion, true)]
 
 [assembly: MelonOptionalDependencies("HealthDisplayWithFont", "tournamentScoring")]
 
@@ -34,8 +34,12 @@ namespace Fontifier
     /// <summary>
     /// Contains mod version.
     /// </summary>
-    static class FontifierModInfo
+    public static class FontifierModInfo
     {
+        /// <summary>
+        /// Mod name.
+        /// </summary>
+        public const string ModName = "Fontifier";
         /// <summary>
         /// Mod version.
         /// </summary>
@@ -44,6 +48,10 @@ namespace Fontifier
         /// Mod schema version.
         /// </summary>
         public const string ModSchemaVer = "1.0.0";
+        /// <summary>
+        /// Melonloader Version.
+        /// </summary>
+        public const string MLVersion = "0.7.0";
     }
 
     /// <summary>
