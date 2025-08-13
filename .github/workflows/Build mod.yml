@@ -297,8 +297,10 @@ jobs:
           Invoke-WebRequest -Uri https://drive.google.com/uc?id=10koiaqNuqS5EzcA5TqMzhGA8Gl1thTNz -OutFile $binPath\artifactsetup\UserData\Fontifier\fonts\CRUMBLE.otf
           $RumbleModUIVersion = jq -r '.dependencies[1] | split("-")[2]' manifest.json
           Write-Output "RumbleModUIVersion=$RumbleModUIVersion"
+          $SchemaVersion=$(awk -F'"' '/ModSchemaVer *= *"/ {ver=$2} END {print ver}' Fontifier/Fontifier.cs)
+          Write-Output "SchemaVersion=$SchemaVersion"
           Set-Content -Path "$binPath\artifactsetup\UserData\Fontifier\Settings.txt" -Value @(
-            "Fontifier ${{ env.DLLVERSION }}"
+            "Fontifier $SchemaVersion"
             "Created by: $RumbleModUIVersion"
             "HealthDisplayWithFont: CRUMBLE"
           )
