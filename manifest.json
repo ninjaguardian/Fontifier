@@ -5,6 +5,7 @@
     "description": "Lets you change the font for other mods.",
     "dependencies": [
         "LavaGang-MelonLoader-0.7.0",
-        "Baumritter-RumbleModUI-2.1.2"
+        "Baumritter-RumbleModUI-2.1.2",
+        "UlvakSkillz-RumbleModdingAPI-3.7.4"
     ]
 }

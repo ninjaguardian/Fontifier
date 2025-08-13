@@ -80,6 +80,21 @@ namespace Fontifier
         /// All font names.
         /// </summary>
         public readonly static List<TMP_FontAsset> fonts = new();
+        private static TMP_FontAsset _defaultFont;
+
+        private static TMP_FontAsset DefaultFont
+        {
+            get
+            {
+                if (_defaultFont == null)
+                {
+                    GameObject go = RumbleModdingAPI.Calls.Create.NewText();
+                    _defaultFont = go.GetComponent<TextMeshPro>().font;
+                    UnityEngine.Object.Destroy(go);
+                }
+                return _defaultFont;
+            }
+        }
 
         /// <inheritdoc/>
         public override void OnLateInitializeMelon()
@@ -229,8 +244,8 @@ namespace Fontifier
             string fontName = (args as ValueChange<string>)?.Value;
             if (string.IsNullOrWhiteSpace(fontName))
             {
-                fontField.SetValue(null, null);
-                HealthDisplayWithFontSetAll(modType, null);
+                fontField.SetValue(null, DefaultFont);
+                HealthDisplayWithFontSetAll(modType, DefaultFont);
                 return;
             }
 
@@ -288,7 +303,7 @@ namespace Fontifier
             {
                 if (string.IsNullOrWhiteSpace(fontName))
                 {
-                    scoreboardText.font = null;
+                    scoreboardText.font = DefaultFont;
                     return;
                 }
 

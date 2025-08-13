@@ -92,8 +92,11 @@
 		<Reference Include="ModUI">
 			<HintPath>$(LibsDirPath)\Mods\ModUI.dll</HintPath>
 		</Reference>
+		<Reference Include="RumbleModdingAPI">
+			<HintPath>$(LibsDirPath)\Mods\RumbleModdingAPI.dll</HintPath>
+		</Reference>
 		<Reference Include="System.Drawing.Common">
-		  <HintPath>$(LibsDirPath)\MelonLoader\net6\System.Drawing.Common.dll</HintPath>
+			<HintPath>$(LibsDirPath)\MelonLoader\net6\System.Drawing.Common.dll</HintPath>
 		</Reference>
 		<Reference Include="Unity.TextMeshPro">
 			<HintPath>$(LibsDirPath)\MelonLoader\Il2CppAssemblies\Unity.TextMeshPro.dll</HintPath>
