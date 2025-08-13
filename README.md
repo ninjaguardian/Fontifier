@@ -1,7 +1,11 @@
 # Fontifier
 ![Photo](https://raw.githubusercontent.com/ninjaguardian/Fontifier/master/Fontifier.png)
 
-## What is this
+[![Github](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3.2.0/assets/cozy/available/github_vector.svg)](https://github.com/ninjaguardian/Fontifier)
+[![Changelog](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3.2.0/assets/cozy/documentation/changelog_vector.svg)](https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier/changelog)
+[![Thunderstore](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3.2.0/assets/cozy/documentation/website_vector.svg)](https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier)
+
+## What is this?
 This mod lets you change the font of other mods' text.
 
 ## Instructions
@@ -9,7 +13,11 @@ This mod lets you change the font of other mods' text.
 2. Run RUMBLE without mods
 3. Drop Mods from .zip into RUMBLE's installation folder
 4. Drop UserData from .zip into RUMBLE's installation folder
-5. Play RUMBLE!
+5. Install dependencies (If you want custom fonts)
+    - [RumbleModdingAPI](https://thunderstore.io/c/rumble/p/UlvakSkillz/RumbleModdingAPI)
+    - [RumbleModUI](https://thunderstore.io/c/rumble/p/Baumritter/RumbleModUI)
+    - [RumbleModUIPlus](https://thunderstore.io/c/rumble/p/ninjaguardian/RumbleModUIPlus)
+6. Play RUMBLE!
 
 ## Supported mods
 | [HealthDisplayWithFont](https://thunderstore.io/c/rumble/p/ninjaguardian/HealthDisplayWithFont) | [TournamentScoringMod](https://thunderstore.io/c/rumble/p/davisgreenwell/TournamentScoringMod) |
@@ -40,4 +48,4 @@ Get help and find other resources in the [Modding Discord](https://discord.gg/fs
 - [File link](https://drive.google.com/drive/folders/1-Wr4TW4FVQ8j8EyKAMHPa-D2Srg05Fyk)
 
 
-[![CC0-1.0 License](https://img.shields.io/badge/License-CC0_1.0_Universal-green.svg)](https://github.com/ninjaguardian/HealthDisplayWithFont?tab=CC0-1.0-1-ov-file)
+[![CC0-1.0 License](https://img.shields.io/badge/License-CC0_1.0_Universal-green.svg)](https://github.com/ninjaguardian/Fontifier?tab=CC0-1.0-1-ov-file)

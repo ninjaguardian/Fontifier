@@ -15,6 +15,7 @@ using UnityEngine;
 using UnityEngine.TextCore.LowLevel;
 
 // TODO: Make ModUI show what the fonts look like.
+// TODO: Add stuff so other people can integrate this themselvs in their mod.
 
 [assembly: MelonInfo(typeof(Fontifier.Fontifier), "Fontifier", FontifierModInfo.ModVer, "ninjaguardian", "https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier")]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
@@ -38,7 +39,7 @@ namespace Fontifier
         /// <summary>
         /// Mod version.
         /// </summary>
-        public const string ModVer = "1.0.2";
+        public const string ModVer = "1.0.3";
         /// <summary>
         /// Mod schema version.
         /// </summary>
@@ -78,7 +79,7 @@ namespace Fontifier
         /// The logger.
         /// </summary>
         public static readonly MelonLogger.Instance Logger = new("Fontifier", System.Drawing.Color.FromArgb(255, 0, 160, 230));
-        private readonly static Mod ModUI = new();
+        private readonly static RumbleModUIPlus.Mod ModUI = new();
         /// <summary>
         /// All font names.
         /// </summary>
@@ -110,6 +111,7 @@ namespace Fontifier
         {
             ModUI.ModName = "Fontifier";
             ModUI.ModVersion = FontifierModInfo.ModVer;
+            ModUI.ModFormatVersion = FontifierModInfo.ModSchemaVer;
             ModUI.SetFolder("Fontifier");
             ModUI.AddDescription("Description", "", "Lets you change the font for other mods.", new Tags { IsSummary = true });
 
@@ -198,179 +200,6 @@ namespace Fontifier
             ModUI.GetFromFile();
             UI.instance.AddMod(ModUI);
             Logger.Msg("Fontifier added to ModUI.");
-        }
-
-        [HarmonyPatch(typeof(Mod), nameof(ModUI.GetFromFile))]
-        public static class GetFromFilePatch
-        {
-            [HarmonyPrefix]
-            static bool GetFromFile(Mod __instance)
-            {
-                if (!object.ReferenceEquals(__instance, ModUI)) return true;
-                Type type = __instance.GetType();
-
-                FieldInfo debugField = type.GetField("debug", BindingFlags.NonPublic | BindingFlags.Instance);
-                bool debug = false;
-                if (debugField != null)
-                    debug = (bool)debugField.GetValue(__instance);
-                else
-                    Logger.Warning("Could not get debug field from ModUI.");
-
-                PropertyInfo prop = type.GetProperty("IsFileLoaded", BindingFlags.NonPublic | BindingFlags.Instance);
-                if (prop == null || !prop.CanWrite)
-                {
-                    Logger.Error("Could not get IsFileLoaded from ModUI. Using default 'GetFromFile'.");
-                    return true;
-                }
-
-                MethodInfo valueValidationMethod = type.GetMethod("ValueValidation", BindingFlags.NonPublic | BindingFlags.Instance);
-                if (valueValidationMethod == null)
-                {
-                    Logger.Error("Could not get ValueValidation from ModUI.");
-                }
-
-                FieldInfo foldersField = type.GetField("Folders", BindingFlags.NonPublic | BindingFlags.Instance);
-                if (foldersField == null)
-                {
-                    Logger.Error("Could not get Folders from ModUI. Using default 'GetFromFile'.");
-                    return true;
-                }
-                Baum_API.Folders Folders = (Baum_API.Folders)foldersField.GetValue(__instance);
-
-                string Path;
-                string[] Lines;
-                bool ValidFile = false;
-
-                if (Folders.GetSubFolder(0) != null) Path = Folders.GetFolderString(Folders.GetSubFolder(0)) + @"\" + __instance.SettingsFile;
-                else Path = Folders.GetFolderString() + @"\" + __instance.SettingsFile;
-
-                if (File.Exists(Path))
-                {
-                    Lines = File.ReadAllLines(Path);
-
-                    if (Lines[0].Contains(__instance.ModName) && Lines[0].Contains(FontifierModInfo.ModSchemaVer))
-                    {
-                        ValidFile = true;
-                        Lines[0] = "";
-                        Lines[1] = "";
-                    }
-
-                    if (ValidFile)
-                    {
-                        foreach (string line in Lines)
-                        {
-                            foreach (ModSetting setting in __instance.Settings)
-                            {
-                                if (setting.Name.Length + 2 < line.Length)
-                                {
-                                    if (line[..setting.Name.Length] == setting.Name)
-                                    {
-                                        bool Valid;
-                                        string value = line[(setting.Name.Length + 2)..];
-                                        if (valueValidationMethod == null)
-                                        {
-                                            ModSetting<string> stringset = (ModSetting<string>)setting;
-
-                                            if (!stringset.ValidationParameters.DoValidation(value))
-                                                Valid = false;
-                                            else
-                                            {
-                                                stringset.Value = value;
-                                                Valid = true;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            Valid = (bool)valueValidationMethod.Invoke(__instance, new object[] { value, setting });
-                                        }
-                                        if (Valid)
-                                        {
-                                            setting.SavedValue = setting.Value;
-                                            if (debug)
-                                            {
-                                                new MelonLogger.Instance(BuildInfo.ModName, System.Drawing.Color.FromArgb(200, 0, 200, 0)).Msg(__instance.ModName + " - " + setting.Name + " " + setting.Value.ToString());
-                                            }
-                                        }
-                                        else
-                                        {
-                                            new MelonLogger.Instance(BuildInfo.ModName, System.Drawing.Color.FromArgb(200, 0, 200, 0)).Msg(__instance.ModName + " - " + setting.Name + " File Read Error.");
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        prop.SetValue(__instance, true);
-                    }
-                    else
-                    {
-                        prop.SetValue(__instance, false);
-                    }
-                }
-
-                return false;
-            }
-        }
-
-        [HarmonyPatch(typeof(Mod), nameof(ModUI.SaveModData))]
-        public static class SaveModDataPatch
-        {
-            [HarmonyPrefix]
-            static bool SaveModData(Mod __instance, string UI_String)
-            {
-                if (!object.ReferenceEquals(__instance, ModUI)) return true;
-                Type type = __instance.GetType();
-
-                PropertyInfo prop = type.GetProperty("IsSaved", BindingFlags.NonPublic | BindingFlags.Instance);
-                if (prop == null || !prop.CanWrite)
-                {
-                    Logger.Error("Could not get IsSaved from ModUI. Using default 'SaveModData'.");
-                    return true;
-                }
-
-                FieldInfo foldersField = type.GetField("Folders", BindingFlags.NonPublic | BindingFlags.Instance);
-                if (foldersField == null)
-                {
-                    Logger.Error("Could not get Folders from ModUI. Using default 'SaveModData'.");
-                    return true;
-                }
-                Baum_API.Folders Folders = (Baum_API.Folders)foldersField.GetValue(__instance);
-
-                FieldInfo eventField = type.GetField("ModSaved", BindingFlags.Instance | BindingFlags.NonPublic);
-                if (eventField == null)
-                {
-                    Logger.Error("Could not get ModSaved from ModUI.");
-                }
-
-                string Path;
-                string Output;
-
-                if (Folders.GetSubFolder(0) != null) Path = Folders.GetFolderString(Folders.GetSubFolder(0)) + @"\" + __instance.SettingsFile;
-                else Path = Folders.GetFolderString() + @"\" + __instance.SettingsFile;
-
-                Folders.CheckAllFoldersExist();
-
-                Output = __instance.ModName + " " + FontifierModInfo.ModSchemaVer + Il2CppSystem.Environment.NewLine + UI_String + Il2CppSystem.Environment.NewLine;
-
-                foreach (ModSetting Setting in __instance.Settings)
-                {
-                    if (!Setting.Tags.DoNotSave)
-                    {
-                        Output += Setting.Name + ": " + Setting.GetValueAsString() + Il2CppSystem.Environment.NewLine;
-                    }
-                }
-
-                File.WriteAllText(Path, Output);
-
-                for (int i = 0; i < __instance.Settings.Count; i++)
-                {
-                    __instance.Settings[i].SavedValue = __instance.Settings[i].Value;
-                }
-                if (eventField != null)
-                    ((Action)eventField.GetValue(__instance))?.Invoke();
-                prop.SetValue(__instance, true);
-
-                return false;
-            }
         }
         #endregion
 

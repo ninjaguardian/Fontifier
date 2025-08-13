@@ -1,11 +1,12 @@
 {
     "name": "Fontifier",
-    "version_number": "1.0.2",
+    "version_number": "1.0.3",
     "website_url": "https://github.com/ninjaguardian/Fontifier",
     "description": "Lets you change the font for other mods.",
     "dependencies": [
         "LavaGang-MelonLoader-0.7.0",
         "Baumritter-RumbleModUI-2.1.2",
-        "UlvakSkillz-RumbleModdingAPI-3.7.4"
+        "UlvakSkillz-RumbleModdingAPI-3.7.4",
+        "ninjaguardian-RumbleModUIPlus-1.0.0"
     ]
 }
