@@ -56,9 +56,9 @@ First, choose if you want Fontifier to be a required dependency or optional depe
     ```c#
     using Il2CppTMPro;
     using MelonLoader;
-    using System; // Sometimes not needed
-    using System.Linq; // Sometimes not needed
-    using System.Reflection;
+    using static Fontifier.Fontifier;
+    // The following two are needed if ImplicitUsings are disabled
+    using System;
     ```
   </details>
 
@@ -73,6 +73,30 @@ First, choose if you want Fontifier to be a required dependency or optional depe
 
   </details>
 
+- <details><summary>And this code:</summary>
+    (Place it in your MelonMod class)
+
+    ```c#
+    #region Fontifier
+    private static Func<TMP_FontAsset> GetFont;
+
+    /// <inheritdoc/>
+    public override void OnInitializeMelon()
+    {
+        GetFont = RegisterModWithReference(this.Info.Name, new EventHandler<EventArgs>(FontChanged));
+    }
+
+    private static void FontChanged(object sender, EventArgs args)
+    {
+        // Change your TextMeshPro.font to the new font.
+        TextMeshProInstance.font = FontFromName(((dynamic)args).Value);
+    }
+    #endregion
+    ```
+
+    ALSO: When you create the TextMeshPro, make sure to `TextMeshProInstance.font = GetFont();`
+  </details>
+
 </details>
 
 <details>
@@ -83,9 +107,10 @@ First, choose if you want Fontifier to be a required dependency or optional depe
     ```c#
     using Il2CppTMPro;
     using MelonLoader;
-    using System; // Sometimes not needed
-    using System.Linq; // Sometimes not needed
     using System.Reflection;
+    // The following two are needed if ImplicitUsings is disabled
+    using System;
+    using System.Linq;
     ```
   </details>
 
@@ -104,21 +129,18 @@ First, choose if you want Fontifier to be a required dependency or optional depe
     ```c#
     #region Fontifier
     private static Func<TMP_FontAsset> GetFont;
+    private static Func<string, TMP_FontAsset> FontFromName;
 
     /// <inheritdoc/>
     public override void OnInitializeMelon()
     {
-        Type fontifierType = RegisteredMelons.FirstOrDefault(m => m.Info.Name == "Fontifier")?.GetType();
-        if (fontifierType != null)
-        {
-            GetFont = (Func<TMP_FontAsset>)fontifierType.GetMethod("RegisterMod", BindingFlags.Public | BindingFlags.Static)?.Invoke(null, new object[] { Info.Name, new EventHandler<EventArgs>(FontChanged) });
-        }
+        if (RegisteredMelons.FirstOrDefault(m => m.Info.Name == "Fontifier")?.GetType() is Type fontifierType && fontifierType != null) (GetFont, FontFromName) = ((Func<TMP_FontAsset>, Func<string, TMP_FontAsset>))fontifierType.GetMethod("RegisterMod", BindingFlags.Public | BindingFlags.Static)?.Invoke(null, new object[] { this.Info.Name, new EventHandler<EventArgs>(FontChanged) });
     }
 
     private static void FontChanged(object sender, EventArgs args)
     {
         // Change your TextMeshPro.font to the new font.
-        TextMeshProInstance.font = GetFont();
+        TextMeshProInstance.font = FontFromName(((dynamic)args).Value);
     }
     #endregion
     ```
