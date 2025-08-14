@@ -159,10 +159,10 @@ Get help and find other resources in the [Modding Discord](https://discord.gg/fs
 
 ## License
 
-**My code:** CC0 1.0 Universal (public domain)
+**My code:** [CC0 1.0 Universal](https://github.com/ninjaguardian/Fontifier?tab=CC0-1.0-1-ov-file) (public domain)
 
 [![CC0-1.0 License](https://img.shields.io/badge/License-CC0_1.0_Universal-green.svg)](https://github.com/ninjaguardian/Fontifier?tab=CC0-1.0-1-ov-file)
 
-**Includes SixLabors.Fonts.dll** (© Six Labors, Apache License 2.0)
+**Includes SixLabors.Fonts.dll** (© Six Labors, [Apache License 2.0](https://github.com/ninjaguardian/Fontifier?tab=Apache-2.0-2-ov-file))
 
 [![Apache License 2.0](https://img.shields.io/badge/License-Apache_License_2.0-green.svg)](https://github.com/ninjaguardian/Fontifier?tab=Apache-2.0-2-ov-file)
