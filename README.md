@@ -157,5 +157,13 @@ Get help and find other resources in the [Modding Discord](https://discord.gg/fs
 - [SDRAWKCABMIAY's video](https://youtu.be/wp4VaVm_XpI)
 - [File link](https://drive.google.com/drive/folders/1-Wr4TW4FVQ8j8EyKAMHPa-D2Srg05Fyk)
 
+## License
+
+**My code:** CC0 1.0 Universal (public domain)
 
 [![CC0-1.0 License](https://img.shields.io/badge/License-CC0_1.0_Universal-green.svg)](https://github.com/ninjaguardian/Fontifier?tab=CC0-1.0-1-ov-file)
+
+**Includes SixLabors.Fonts.dll** (© Six Labors, Apache License 2.0)
+
+[![Apache License 2.0](https://img.shields.io/badge/License-Apache_License_2.0-green.svg)](https://raw.githubusercontent.com/ninjaguardian/Fontifier/master/LICENSE-SixLaborsFonts.txt)
+
