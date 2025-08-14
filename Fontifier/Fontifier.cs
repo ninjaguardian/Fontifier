@@ -271,12 +271,12 @@ namespace Fontifier
         /// <param name="modName">The name of your MelonMod (this.Info.Name)</param>
         /// <param name="valueChanged">The function that will be ran when the value changes</param>
         /// <returns>Invoke to get the current TMP_FontAsset</returns>
-        public static Func<TMP_FontAsset> RegisterMod(string modName, EventHandler<EventArgs> valueChanged)
+        public static (Func<TMP_FontAsset>, Func<string, TMP_FontAsset>) RegisterMod(string modName, EventHandler<EventArgs> valueChanged)
         {
             ModSetting<string> setting = ModUI.AddToList(modName, "", ModDesc, new Tags());
             ModUI.AddValidation(modName, validator);
             setting.CurrentValueChanged += valueChanged;
-            return () => FontFromName((string)setting.Value);
+            return (() => FontFromName((string)setting.Value), FontFromName);
         }
     }
 }
