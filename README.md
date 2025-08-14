@@ -165,5 +165,4 @@ Get help and find other resources in the [Modding Discord](https://discord.gg/fs
 
 **Includes SixLabors.Fonts.dll** (© Six Labors, Apache License 2.0)
 
-[![Apache License 2.0](https://img.shields.io/badge/License-Apache_License_2.0-green.svg)](https://raw.githubusercontent.com/ninjaguardian/Fontifier/master/LICENSE-SixLaborsFonts.txt)
-
+[![Apache License 2.0](https://img.shields.io/badge/License-Apache_License_2.0-green.svg)](https://github.com/ninjaguardian/Fontifier?tab=Apache-2.0-2-ov-file)
