@@ -1,6 +1,6 @@
 # v1.1.0
 - Implements stuff for devs.
-    - Breaks HealthDisplayWithFont v0.3.0
+    - Breaks [HealthDisplayWithFont](https://thunderstore.io/c/rumble/p/ninjaguardian/HealthDisplayWithFont) v0.3.0
 - Switch off of windows only
     - Now includes a UserLib
 
