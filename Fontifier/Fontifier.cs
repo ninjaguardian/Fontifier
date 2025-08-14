@@ -1,7 +1,5 @@
 ﻿using Fontifier;
 using HarmonyLib;
-using Il2CppRUMBLE.Managers;
-using Il2CppRUMBLE.Players;
 using Il2CppTMPro;
 using MelonLoader;
 using RumbleModUI;
@@ -204,7 +202,6 @@ namespace Fontifier
                     loadedFont.name = candidate;
                     existingNames.Add(loadedFont.name);
                     fonts.Add(loadedFont);
-                    Logger.Msg($"Loaded font: {loadedFont.name} from {fontPath}");
                 }
                 catch (Exception ex)
                 {
@@ -215,15 +212,8 @@ namespace Fontifier
 
             foreach (MelonMod mod in RegisteredMelons)
             {
-                if (mod.Info.Name.Equals("HealthDisplayWithFont", StringComparison.OrdinalIgnoreCase))
+                if (mod.Info.Name.Equals("RUMBLE Tournament Scoring", StringComparison.OrdinalIgnoreCase))
                 {
-                    Logger.Msg("HealthDisplayWithFont was found.");
-                    ModUI.AddToList("HealthDisplayWithFont", "", ModDesc, new Tags()).CurrentValueChanged += HealthDisplayWithFontChanged;
-                    ModUI.AddValidation("HealthDisplayWithFont", validator);
-                }
-                else if (mod.Info.Name.Equals("RUMBLE Tournament Scoring", StringComparison.OrdinalIgnoreCase))
-                {
-                    Logger.Msg("RUMBLE Tournament Scoring was found.");
                     TournamentScoringFont = ModUI.AddToList("RUMBLE Tournament Scoring", "", ModDesc, new Tags());
                     TournamentScoringFont.CurrentValueChanged += TournamentScoringChanged;
                     ModUI.AddValidation("RUMBLE Tournament Scoring", validator);
@@ -234,54 +224,6 @@ namespace Fontifier
 
             ModUI.GetFromFile();
             UI.instance.AddMod(ModUI);
-            Logger.Msg("Fontifier added to ModUI.");
-        }
-        #endregion
-
-        #region HealthDisplayWithFont
-        private static void HealthDisplayWithFontChanged(object sender, EventArgs args)
-        {
-            MelonMod healthMod = MelonFromName("HealthDisplayWithFont");
-            if (healthMod == null)
-            {
-                Logger.Warning("HealthDisplayWithFont mod not found.");
-                return;
-            }
-
-            Type modType = healthMod.GetType();
-            FieldInfo fontField = modType.GetField("fontAsset", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-            if (fontField == null)
-            {
-                Logger.Warning("Field 'fontAsset' not found in HealthDisplayWithFont.");
-                return;
-            }
-
-            TMP_FontAsset font = FontFromName(((ValueChange<string>)args)?.Value);
-            fontField.SetValue(null, font);
-
-            MethodInfo method = modType.GetMethod(
-                "GetHealthbar",
-                BindingFlags.Static | BindingFlags.NonPublic,
-                null,
-                new Type[] { typeof(Transform), typeof(ControllerType?) },
-                null
-            );
-
-            if (method == null)
-            {
-                Logger.Warning("GetHealthbar method not found in HealthDisplayWithFont.");
-                return;
-            }
-
-            foreach (Player player in PlayerManager.instance.AllPlayers)
-            {
-                PlayerController controller = player.Controller;
-                if (controller == null) continue;
-
-                Transform uiTransform = method.Invoke(null, new object[] { controller.transform.Find("UI"), controller.controllerType }) as Transform;
-                TextMeshPro tmp = uiTransform?.Find("HealthText")?.GetComponent<TextMeshPro>();
-                if (tmp != null) tmp.font = font;
-            }
         }
         #endregion
 

@@ -77,14 +77,8 @@
 		<Reference Include="Il2CppInterop.Runtime">
 			<HintPath>$(LibsDirPath)\MelonLoader\net6\Il2CppInterop.Runtime.dll</HintPath>
 		</Reference>
-		<Reference Include="Il2CppBucketheadEntertainment.Plugins">
-			<HintPath>$(LibsDirPath)\MelonLoader\Il2CppAssemblies\Il2CppBucketheadEntertainment.Plugins.dll</HintPath>
-		</Reference>
 		<Reference Include="Il2Cppmscorlib">
 			<HintPath>$(LibsDirPath)\MelonLoader\Il2CppAssemblies\Il2Cppmscorlib.dll</HintPath>
-		</Reference>
-		<Reference Include="Il2CppRUMBLE.Runtime">
-			<HintPath>$(LibsDirPath)\MelonLoader\Il2CppAssemblies\Il2CppRUMBLE.Runtime.dll</HintPath>
 		</Reference>
 		<Reference Include="MelonLoader">
 			<HintPath>$(LibsDirPath)\MelonLoader\net6\MelonLoader.dll</HintPath>

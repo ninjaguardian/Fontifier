@@ -6,7 +6,7 @@
 [![Thunderstore](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3.2.0/assets/cozy/documentation/website_vector.svg)](https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier)
 
 ## What is this?
-This mod lets you change the font of other mods' text.
+This mod lets you change the font of other mods' text. It also allows people to use this in their own mods (see 'For Devs').
 
 ## Instructions
 1. Install [MelonLoader](https://github.com/LavaGang/MelonLoader)
@@ -34,11 +34,70 @@ This mod lets you change the font of other mods' text.
 7. Type in the name of the font you want (case-insensitive) and hit enter
 8. If it looks good, hit save
 
-## I can't type in ModUI
+## "I can't type in ModUI"
 If you have UnityExplorer, hit F7 first. If not, ask the discord.
 
-## It's not saving
+## "It's not saving"
 Make sure to press enter and then hit save. If you are, ask the discord.
+
+## For Devs
+<details>
+<summary>For Devs</summary>
+
+If you create a TextMeshPro (or similar) in your mod and want to use Fontifier with it, here's what you'll need.
+
+<details>
+<summary>You will need the following usings:</summary>
+
+```c#
+using Il2CppTMPro;
+using MelonLoader;
+using System;
+using System.Linq;
+using System.Reflection;
+```
+
+</details>
+
+<details>
+<summary>And these dll refrences:</summary>
+
+- net6
+    - MelonLoader.dll
+- Il2CppAssemblies
+    - Unity.TextMeshPro.dll
+
+</details>
+
+<details>
+<summary>And this code:</summary>
+(Place it in your MelonMod class)
+
+```c#
+#region Fontifier
+private static Func<TMP_FontAsset> GetFont;
+
+/// <inheritdoc/>
+public override void OnInitializeMelon()
+{
+    Type fontifierType = RegisteredMelons.FirstOrDefault(m => m.Info.Name == "Fontifier")?.GetType();
+    if (fontifierType != null)
+    {
+        GetFont = (Func<TMP_FontAsset>)fontifierType.GetMethod("RegisterMod", BindingFlags.Public | BindingFlags.Static)?.Invoke(null, new object[] { Info.Name, new EventHandler<EventArgs>(FontChanged) });
+    }
+}
+
+private static void FontChanged(object sender, EventArgs args)
+{
+    // Change your TextMeshPro.font to the new font.
+    TextMeshProInstance.font = GetFont();
+}
+#endregion
+```
+
+ALSO: When you create the TextMeshPro, make sure to `TextMeshProInstance.font = GetFont();`
+</details>
+</details>
 
 ## Help And Other Resources
 Get help and find other resources in the [Modding Discord](https://discord.gg/fsbcnZgzfa)
