@@ -12,8 +12,9 @@ using UnityEngine;
 using UnityEngine.TextCore.LowLevel;
 
 // TODO: Make ModUI show what the fonts look like.
-// TODO: Add stuff so other people can integrate this themselvs in their mod.
+// TODO: Font size changer (especialy for MatchInfo in gym + CRUMBLE)
 
+#region Assemblies
 [assembly: MelonInfo(typeof(Fontifier.Fontifier), FontifierModInfo.ModName, FontifierModInfo.ModVer, "ninjaguardian", "https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier")]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
 
@@ -22,6 +23,7 @@ using UnityEngine.TextCore.LowLevel;
 
 [assembly: MelonPlatformDomain(MelonPlatformDomainAttribute.CompatibleDomains.IL2CPP)]
 [assembly: VerifyLoaderVersion(FontifierModInfo.MLVersion, true)]
+#endregion
 
 namespace Fontifier
 {
@@ -37,7 +39,7 @@ namespace Fontifier
         /// <summary>
         /// Mod version.
         /// </summary>
-        public const string ModVer = "1.1.0";
+        public const string ModVer = "1.1.1";
         /// <summary>
         /// Mod schema version.
         /// </summary>
@@ -76,6 +78,7 @@ namespace Fontifier
     /// </summary>
     public class Fontifier : MelonMod
     {
+        #region vars
         private const string ModDesc = "Enter a font from the Font List or leave it empty to use the default font.\n\nMake sure to hit enter!";
         /// <summary>
         /// The logger.
@@ -86,6 +89,7 @@ namespace Fontifier
         /// </summary>
         public readonly static List<TMP_FontAsset> fonts = new();
         private readonly static RumbleModUIPlus.Mod ModUI = new();
+        private readonly static Tags tags = new();
         private readonly static FontNameValidator validator = new();
         /// <summary>
         /// Use DefaultFont instead.
@@ -106,7 +110,9 @@ namespace Fontifier
                 return _defaultFont;
             }
         }
+        #endregion
 
+        #region Helper funcs
         /// <summary>
         /// Gets a font based on its name.
         /// </summary>
@@ -128,6 +134,7 @@ namespace Fontifier
         /// Gets a MelonMod based on its name.
         /// </summary>
         public static MelonMod MelonFromName(string melonName) => RegisteredMelons.FirstOrDefault(m => m.Info.Name == melonName);
+        #endregion
 
         /// <inheritdoc/>
         public override void OnLateInitializeMelon()
@@ -142,7 +149,7 @@ namespace Fontifier
             ModUI.ModVersion = FontifierModInfo.ModVer;
             ModUI.ModFormatVersion = FontifierModInfo.ModSchemaVer;
             ModUI.SetFolder("Fontifier");
-            ModUI.AddDescription("Description", "", "Lets you change the font for other mods.", new Tags { IsSummary = true });
+            ModUI.AddDescriptionAtStart("Description", "", "Lets you change the font for other mods.", new Tags { IsSummary = true });
 
             HashSet<string> existingNames = new(StringComparer.OrdinalIgnoreCase);
             foreach (string fontPath in
@@ -202,17 +209,29 @@ namespace Fontifier
                     Logger.Error($"Failed to load font from {fontPath}", ex);
                 }
             }
-            ModUI.AddDescription("Fonts List", "", "The following fonts are loaded:\n" + string.Join("\n", fonts.Select(f => f.name)), new Tags { IsEmpty = true });
+            ModUI.AddDescriptionAtIndex("Fonts List", "", "The following fonts are loaded:\n" + string.Join("\n", fonts.Select(f => f.name)), new Tags { IsEmpty = true }, 1);
 
             foreach (MelonMod mod in RegisteredMelons)
             {
                 if (mod.Info.Name.Equals("RUMBLE Tournament Scoring", StringComparison.OrdinalIgnoreCase))
                 {
-                    TournamentScoringFont = ModUI.AddToList("RUMBLE Tournament Scoring", "", ModDesc, new Tags());
-                    TournamentScoringFont.CurrentValueChanged += TournamentScoringChanged;
-                    ModUI.AddValidation("RUMBLE Tournament Scoring", validator);
+                    FieldInfo scoreboardText = mod.GetType().GetField("scoreboardText", BindingFlags.Instance | BindingFlags.NonPublic);
+                    if (scoreboardText == null)
+                    {
+                        Logger.Warning("RUMBLE Tournament Scoring's scoreboardText FieldInfo is null.");
+                        continue;
+                    }
 
-                    HarmonyInstance.Patch(TournamentScoringPatch.TargetMethod(), null, TournamentScoringPatch.GetPostfix());
+                    TournamentScoreboardText = () => (TextMeshPro)scoreboardText.GetValue(mod);
+
+                    TournamentScoringFont = RegisterModWithReference("RUMBLE Tournament Scoring", TournamentScoringChanged);
+
+                    HarmonyInstance.Patch(TournamentScoringPatch.TargetMethod(mod), postfix: TournamentScoringPatch.GetPostfix());
+                }
+                else if (mod.Info.Name.Equals("MatchInfo", StringComparison.OrdinalIgnoreCase))
+                {
+                    MatchInfoFont = RegisterModWithReference("MatchInfo", MatchInfoChanged);
+                    HarmonyInstance.Patch(MatchInfoPatch.TargetMethod(mod), postfix: MatchInfoPatch.GetPostfix());
                 }
             }
 
@@ -222,49 +241,84 @@ namespace Fontifier
         #endregion
 
         #region RUMBLE Tournament Scoring
-        private static ModSetting<string> TournamentScoringFont;
+        private static Func<TMP_FontAsset> TournamentScoringFont;
+        private static Func<TextMeshPro> TournamentScoreboardText;
 
-        class TournamentScoringPatch
+        static class TournamentScoringPatch
         {
-            public static MethodBase TargetMethod()
+            public static MethodBase TargetMethod(MelonMod mod) => mod.GetType().GetMethod("SpawnScoreboard", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            public static void Postfix()
             {
-                return MelonFromName("RUMBLE Tournament Scoring").GetType().GetMethod("SpawnScoreboard", BindingFlags.Instance | BindingFlags.NonPublic);
+                TextMeshPro scoreboardText = TournamentScoreboardText();
+                if (scoreboardText != null)
+                    scoreboardText.font = TournamentScoringFont();
             }
 
-            public static void Postfix(MelonMod __instance)
-            {
-                TournamentScoringChanged(__instance, (string)TournamentScoringFont.Value);
-            }
-
-            public static HarmonyMethod GetPostfix()
-            {
-                return new HarmonyMethod(typeof(TournamentScoringPatch).GetMethod(nameof(Postfix)));
-            }
+            public static HarmonyMethod GetPostfix() => new(typeof(TournamentScoringPatch).GetMethod(nameof(Postfix)));
         }
 
         private static void TournamentScoringChanged(object sender, EventArgs args)
         {
-            MelonMod tournamentScoringMod = MelonFromName("RUMBLE Tournament Scoring");
-            if (tournamentScoringMod == null)
-            {
-                Logger.Warning("RUMBLE Tournament Scoring mod not found.");
-                return;
-            }
-
-            TournamentScoringChanged(tournamentScoringMod, ((ValueChange<string>)args)?.Value);
-        }
-
-        private static void TournamentScoringChanged(MelonMod tournamentScoringMod, string fontName)
-        {
-            if (tournamentScoringMod.GetType()
-                .GetField("scoreboardText", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?.GetValue(tournamentScoringMod) is TextMeshPro scoreboardText
-                && scoreboardText != null)
-
-                scoreboardText.font = FontFromName(fontName);
+            TextMeshPro scoreboardText = TournamentScoreboardText();
+            if (scoreboardText != null)
+                scoreboardText.font = FontFromName(((ValueChange<string>)args)?.Value);
         }
         #endregion
 
+        #region MatchInfo
+        private static Func<TMP_FontAsset> MatchInfoFont;
+        private static GameObject MatchInfoGameObject;
+        private static GameObject MatchInfoGymGameObject;
+
+        static class MatchInfoPatch
+        {
+            public static MethodBase TargetMethod(MelonMod mod) => mod.GetType().GetMethod("RunInit", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            public static void Postfix(MelonMod __instance)
+            {
+                Type modType = __instance.GetType();
+                TMP_FontAsset font = MatchInfoFont();
+
+                MatchInfoGameObject = (GameObject)modType.GetField("matchInfoGameObject", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
+                if (MatchInfoGameObject == null)
+                    Logger.Warning("MatchInfo's matchInfoGameObject is null.");
+                else
+                    foreach (TextMeshPro tmp in MatchInfoGameObject.GetComponentsInChildren<TextMeshPro>(true))
+                        tmp.font = font;
+
+                MatchInfoGymGameObject = (GameObject)modType.GetField("gymMatchInfoGameObject", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
+                if (MatchInfoGymGameObject == null)
+                    Logger.Warning("MatchInfo's gymMatchInfoGameObject is null.");
+                else
+                {
+                    MatchInfoGymGameObject.GetComponent<TextMeshPro>().font = font;
+                    foreach (TextMeshPro tmp in MatchInfoGymGameObject.GetComponentsInChildren<TextMeshPro>(true))
+                        tmp.font = font;
+                }
+            }
+
+            public static HarmonyMethod GetPostfix() => new(typeof(MatchInfoPatch).GetMethod(nameof(Postfix)));
+        }
+
+        private static void MatchInfoChanged(object sender, EventArgs args)
+        {
+            TMP_FontAsset font = FontFromName(((ValueChange<string>)args)?.Value);
+
+            if (MatchInfoGameObject != null)
+                foreach (TextMeshPro tmp in MatchInfoGameObject.GetComponentsInChildren<TextMeshPro>(true))
+                    tmp.font = font;
+
+            if (MatchInfoGymGameObject != null)
+            {
+                MatchInfoGymGameObject.GetComponent<TextMeshPro>().font = font;
+                foreach (TextMeshPro tmp in MatchInfoGymGameObject.GetComponentsInChildren<TextMeshPro>(true))
+                    tmp.font = font;
+            }
+        }
+        #endregion
+
+        #region Dev Stuff
         /// <summary>
         /// Register a mod to Fontifier.
         /// </summary>
@@ -273,7 +327,7 @@ namespace Fontifier
         /// <returns>1: Invoke to get the current TMP_FontAsset, 2: Gets a font based on its name</returns>
         public static (Func<TMP_FontAsset>, Func<string, TMP_FontAsset>) RegisterMod(string modName, EventHandler<EventArgs> valueChanged)
         {
-            ModSetting<string> setting = ModUI.AddToList(modName, "", ModDesc, new Tags());
+            ModSetting<string> setting = ModUI.AddToList(modName, "", ModDesc, tags);
             ModUI.AddValidation(modName, validator);
             setting.CurrentValueChanged += valueChanged;
             return (() => FontFromName((string)setting.Value), FontFromName);
@@ -287,10 +341,11 @@ namespace Fontifier
         /// <returns>Invoke to get the current TMP_FontAsset</returns>
         public static Func<TMP_FontAsset> RegisterModWithReference(string modName, EventHandler<EventArgs> valueChanged)
         {
-            ModSetting<string> setting = ModUI.AddToList(modName, "", ModDesc, new Tags());
+            ModSetting<string> setting = ModUI.AddToList(modName, "", ModDesc, tags);
             ModUI.AddValidation(modName, validator);
             setting.CurrentValueChanged += valueChanged;
             return () => FontFromName((string)setting.Value);
         }
+        #endregion
     }
 }

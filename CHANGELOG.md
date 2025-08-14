@@ -1,3 +1,7 @@
+# v1.1.1
+- Add support for [MatchInfo](https://thunderstore.io/c/rumble/p/UlvakSkillz/MatchInfo).
+- Make Description and Fonts List always on top.
+
 # v1.1.0
 - Implements stuff for devs.
     - Breaks [HealthDisplayWithFont](https://thunderstore.io/c/rumble/p/ninjaguardian/HealthDisplayWithFont) v0.3.0

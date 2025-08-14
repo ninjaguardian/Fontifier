@@ -20,9 +20,9 @@ This mod lets you change the font of other mods' text. It also allows people to 
 7. Play RUMBLE!
 
 ## Supported mods
-| [HealthDisplayWithFont](https://thunderstore.io/c/rumble/p/ninjaguardian/HealthDisplayWithFont) | [TournamentScoringMod](https://thunderstore.io/c/rumble/p/davisgreenwell/TournamentScoringMod) |
-|--|--|
-| [![Photo](https://raw.githubusercontent.com/ninjaguardian/HealthDisplayWithFont/master/icon.png)](https://thunderstore.io/c/rumble/p/ninjaguardian/HealthDisplayWithFont) | [![Photo](https://gcdn.thunderstore.io/live/repository/icons/davisgreenwell-TournamentScoringMod-1.0.1.png)](https://thunderstore.io/c/rumble/p/davisgreenwell/TournamentScoringMod) |
+| [HealthDisplayWithFont](https://thunderstore.io/c/rumble/p/ninjaguardian/HealthDisplayWithFont) | [TournamentScoringMod](https://thunderstore.io/c/rumble/p/davisgreenwell/TournamentScoringMod) | [MatchInfo](https://thunderstore.io/c/rumble/p/UlvakSkillz/MatchInfo) |
+|--|--|--|
+| [![HealthDisplayWithFont's Icon](https://raw.githubusercontent.com/ninjaguardian/HealthDisplayWithFont/master/icon.png)](https://thunderstore.io/c/rumble/p/ninjaguardian/HealthDisplayWithFont) | [![TournamentScoringMod's Icon](https://gcdn.thunderstore.io/live/repository/icons/davisgreenwell-TournamentScoringMod-1.0.1.png)](https://thunderstore.io/c/rumble/p/davisgreenwell/TournamentScoringMod) | [![MatchInfo's Icon](https://gcdn.thunderstore.io/live/repository/icons/UlvakSkillz-MatchInfo-2.4.0.png)](https://thunderstore.io/c/rumble/p/UlvakSkillz/MatchInfo) |
 
 ## Choose a font
 1. Move any .ttf or .otf fonts into UserData\Fontifier\fonts
