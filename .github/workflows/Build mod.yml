@@ -281,7 +281,7 @@ jobs:
       #     dotnet workload clean
 
       - name: Build
-        run: dotnet build --configuration Release --no-self-contained /p:LIBSDIRPATH=${{ env.LIBSDIRPATH }}
+        run: dotnet build --configuration Release --no-self-contained -o "Fontifier\bin\Release" /p:LIBSDIRPATH=${{ env.LIBSDIRPATH }}
       
       - name: Test
         run: dotnet test --configuration Release --no-build --no-restore --verbosity normal /p:LIBSDIRPATH=${{ env.LIBSDIRPATH }}
@@ -290,9 +290,11 @@ jobs:
         if: ${{ env.DLLVERSION != '' }}
         shell: pwsh
         run: |
-          $binPath = "Fontifier\bin\x64\Release\net6.0-windows10.0.17763.0\win-x64\"
+          $binPath = "Fontifier\bin\Release"
           New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\Mods | Out-Null
           Move-Item -Path $binPath\Fontifier.dll -Destination $binPath\artifactsetup\Mods
+          New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\UserLibs | Out-Null
+          Move-Item -Path (Get-ChildItem "$env:UserProfile\.nuget\packages\sixlabors.fonts\" | Where-Object { $_.PSIsContainer } | Sort-Object Name -Descending | Select-Object -First 1 | Get-ChildItem -Recurse | Where-Object { -not $_.PSIsContainer -and $_.Name -eq "SixLabors.Fonts.dll" }).FullName -Destination $binPath\artifactsetup\UserLibs
           New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\UserData\Fontifier\fonts | Out-Null
           Invoke-WebRequest -Uri https://drive.google.com/uc?id=10koiaqNuqS5EzcA5TqMzhGA8Gl1thTNz -OutFile $binPath\artifactsetup\UserData\Fontifier\fonts\CRUMBLE.otf
           $RumbleModUIVersion = jq -r '.dependencies[1] | split("-")[2]' manifest.json

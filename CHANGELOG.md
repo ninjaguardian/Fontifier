@@ -1,3 +1,9 @@
+# v1.1.0
+- Implements stuff for devs.
+    - Breaks HealthDisplayWithFont v0.3.0
+- Switch off of windows only
+    - Now includes a UserLib
+
 # v1.0.3
 - Use [RumbleModUIPlus](https://thunderstore.io/c/rumble/p/ninjaguardian/RumbleModUIPlus)
     - Fixes the same issue as v1.0.2

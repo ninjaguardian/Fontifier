@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net6.0-windows10.0.17763.0</TargetFramework>
+		<TargetFramework>net6.0</TargetFramework>
 		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>disable</Nullable>
 
@@ -16,15 +16,15 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/ninjaguardian/Fontifier</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
-		<VersionPrefix>1.0.3</VersionPrefix>
+		<VersionPrefix>1.1.0</VersionPrefix>
 		<AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
 		<FileVersion>$(VersionPrefix).0</FileVersion>
 		<Platform>x64</Platform>
 		<Platforms>x64</Platforms>
 		<PlatformTarget>x64</PlatformTarget>
-		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
 		<Prefer32Bit>False</Prefer32Bit>
 		<PackageProjectUrl>https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier</PackageProjectUrl>
+		<SelfContained>false</SelfContained>
 
 		<LibsDirPath>$(LIBSDIRPATH)</LibsDirPath>
 		<LibsDirPath Condition="'$(LibsDirPath)'==''">C:\Program Files (x86)\Steam\steamapps\common\RUMBLE</LibsDirPath>
@@ -71,6 +71,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="SixLabors.Fonts" Version="2.1.3" />
 		<Reference Include="0Harmony">
 			<HintPath>$(LibsDirPath)\MelonLoader\net6\0Harmony.dll</HintPath>
 		</Reference>
@@ -85,9 +86,6 @@
 		</Reference>
 		<Reference Include="ModUI">
 			<HintPath>$(LibsDirPath)\Mods\ModUI.dll</HintPath>
-		</Reference>
-		<Reference Include="RumbleModdingAPI">
-			<HintPath>$(LibsDirPath)\Mods\RumbleModdingAPI.dll</HintPath>
 		</Reference>
 		<Reference Include="RumbleModUIPlus">
 			<HintPath>$(LibsDirPath)\Mods\RumbleModUIPlus.dll</HintPath>

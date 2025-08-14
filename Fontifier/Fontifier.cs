@@ -5,7 +5,6 @@ using MelonLoader;
 using RumbleModUI;
 using System;
 using System.Collections.Generic;
-using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -21,11 +20,8 @@ using UnityEngine.TextCore.LowLevel;
 [assembly: MelonColor(255, 0, 160, 230)]
 [assembly: MelonAuthorColor(255, 0, 160, 230)]
 
-[assembly: MelonPlatform(MelonPlatformAttribute.CompatiblePlatforms.WINDOWS_X64)]
 [assembly: MelonPlatformDomain(MelonPlatformDomainAttribute.CompatibleDomains.IL2CPP)]
 [assembly: VerifyLoaderVersion(FontifierModInfo.MLVersion, true)]
-
-[assembly: MelonOptionalDependencies("HealthDisplayWithFont", "tournamentScoring")]
 
 namespace Fontifier
 {
@@ -41,7 +37,7 @@ namespace Fontifier
         /// <summary>
         /// Mod version.
         /// </summary>
-        public const string ModVer = "1.0.3";
+        public const string ModVer = "1.1.0";
         /// <summary>
         /// Mod schema version.
         /// </summary>
@@ -104,9 +100,8 @@ namespace Fontifier
             {
                 if (_defaultFont == null)
                 {
-                    GameObject go = RumbleModdingAPI.Calls.Create.NewText();
-                    _defaultFont = go.GetComponent<TextMeshPro>().font;
-                    UnityEngine.Object.Destroy(go);
+                    _defaultFont = Resources.FindObjectsOfTypeAll<TMP_FontAsset>()
+                        .FirstOrDefault(font => font.name.Equals("GOODDP__ SDF Global Text Material", StringComparison.OrdinalIgnoreCase));
                 }
                 return _defaultFont;
             }
@@ -174,11 +169,10 @@ namespace Fontifier
                     string baseName;
                     try
                     {
-                        using PrivateFontCollection fontCollection = new();
-                        fontCollection.AddFontFile(fontPath);
-                        if (fontCollection.Families.Length == 0 || string.IsNullOrWhiteSpace(fontCollection.Families[0].Name))
+                        string familyName = new SixLabors.Fonts.FontCollection().Add(fontPath).Name;
+                        if (string.IsNullOrWhiteSpace(familyName))
                             throw new Exception("Font has no internal family name.");
-                        baseName = fontCollection.Families[0].Name;
+                        baseName = familyName;
                     }
                     catch (Exception ex)
                     {

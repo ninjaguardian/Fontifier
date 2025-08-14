@@ -13,11 +13,11 @@ This mod lets you change the font of other mods' text. It also allows people to 
 2. Run RUMBLE without mods
 3. Drop Mods from .zip into RUMBLE's installation folder
 4. Drop UserData from .zip into RUMBLE's installation folder
-5. Install dependencies (If you want custom fonts)
-    - [RumbleModdingAPI](https://thunderstore.io/c/rumble/p/UlvakSkillz/RumbleModdingAPI)
+5. Drop UserLibs from .zip into RUMBLE's installation folder
+6. Install dependencies (If you want custom fonts)
     - [RumbleModUI](https://thunderstore.io/c/rumble/p/Baumritter/RumbleModUI)
     - [RumbleModUIPlus](https://thunderstore.io/c/rumble/p/ninjaguardian/RumbleModUIPlus)
-6. Play RUMBLE!
+7. Play RUMBLE!
 
 ## Supported mods
 | [HealthDisplayWithFont](https://thunderstore.io/c/rumble/p/ninjaguardian/HealthDisplayWithFont) | [TournamentScoringMod](https://thunderstore.io/c/rumble/p/davisgreenwell/TournamentScoringMod) |
@@ -44,58 +44,87 @@ Make sure to press enter and then hit save. If you are, ask the discord.
 <details>
 <summary>For Devs</summary>
 
-If you create a TextMeshPro (or similar) in your mod and want to use Fontifier with it, here's what you'll need.
+If you create a TextMeshPro (or similar) in your mod and want to use Fontifier with it, here's how to do it.
+
+First, choose if you want Fontifier to be a required dependency or optional dependency.
 
 <details>
-<summary>You will need the following usings:</summary>
+<summary>Required</summary>
 
-```c#
-using Il2CppTMPro;
-using MelonLoader;
-using System;
-using System.Linq;
-using System.Reflection;
-```
+- <details><summary>You will need the following usings:</summary>
+
+    ```c#
+    using Il2CppTMPro;
+    using MelonLoader;
+    using System; // Sometimes not needed
+    using System.Linq; // Sometimes not needed
+    using System.Reflection;
+    ```
+  </details>
+
+- <details><summary>And these dll refrences:</summary>
+
+    - net6
+        - MelonLoader.dll
+    - Il2CppAssemblies
+        - Unity.TextMeshPro.dll
+    - Mods
+        - Fontifier.dll
+
+  </details>
 
 </details>
 
 <details>
-<summary>And these dll refrences:</summary>
+<summary>Optional</summary>
 
-- net6
-    - MelonLoader.dll
-- Il2CppAssemblies
-    - Unity.TextMeshPro.dll
+- <details><summary>You will need the following usings:</summary>
 
-</details>
+    ```c#
+    using Il2CppTMPro;
+    using MelonLoader;
+    using System; // Sometimes not needed
+    using System.Linq; // Sometimes not needed
+    using System.Reflection;
+    ```
+  </details>
 
-<details>
-<summary>And this code:</summary>
-(Place it in your MelonMod class)
+- <details><summary>And these dll refrences:</summary>
 
-```c#
-#region Fontifier
-private static Func<TMP_FontAsset> GetFont;
+    - net6
+        - MelonLoader.dll
+    - Il2CppAssemblies
+        - Unity.TextMeshPro.dll
 
-/// <inheritdoc/>
-public override void OnInitializeMelon()
-{
-    Type fontifierType = RegisteredMelons.FirstOrDefault(m => m.Info.Name == "Fontifier")?.GetType();
-    if (fontifierType != null)
+  </details>
+
+- <details><summary>And this code:</summary>
+    (Place it in your MelonMod class)
+
+    ```c#
+    #region Fontifier
+    private static Func<TMP_FontAsset> GetFont;
+
+    /// <inheritdoc/>
+    public override void OnInitializeMelon()
     {
-        GetFont = (Func<TMP_FontAsset>)fontifierType.GetMethod("RegisterMod", BindingFlags.Public | BindingFlags.Static)?.Invoke(null, new object[] { Info.Name, new EventHandler<EventArgs>(FontChanged) });
+        Type fontifierType = RegisteredMelons.FirstOrDefault(m => m.Info.Name == "Fontifier")?.GetType();
+        if (fontifierType != null)
+        {
+            GetFont = (Func<TMP_FontAsset>)fontifierType.GetMethod("RegisterMod", BindingFlags.Public | BindingFlags.Static)?.Invoke(null, new object[] { Info.Name, new EventHandler<EventArgs>(FontChanged) });
+        }
     }
-}
 
-private static void FontChanged(object sender, EventArgs args)
-{
-    // Change your TextMeshPro.font to the new font.
-    TextMeshProInstance.font = GetFont();
-}
-#endregion
-```
+    private static void FontChanged(object sender, EventArgs args)
+    {
+        // Change your TextMeshPro.font to the new font.
+        TextMeshProInstance.font = GetFont();
+    }
+    #endregion
+    ```
 
-ALSO: When you create the TextMeshPro, make sure to `TextMeshProInstance.font = GetFont();`
+    ALSO: When you create the TextMeshPro, make sure to `TextMeshProInstance.font = GetFont();`
+  </details>
 </details>
 </details>
 
