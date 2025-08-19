@@ -10,6 +10,7 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.TextCore.LowLevel;
+using static RumbleModdingAPI.Calls.GameObjects.Gym.LOGIC.Heinhouserproducts.MoveLearning.MoveLearnSelector.Model.UI;
 
 // TODO: Make ModUI show what the fonts look like.
 // TODO: Font size changer (especialy for MatchInfo in gym + CRUMBLE)
@@ -197,6 +198,38 @@ namespace Fontifier
             TMP_FontAsset currentFont = FontFromName(fontName);
             #pragma warning restore CS0618
 
+            string sourceName = currentFont.name;
+            TMP_FontAsset newFont = DuplicateFont(currentFont);
+
+            if (newFont == null)
+            {
+                newFont = DuplicateFont(DefaultFont);
+                if (newFont == null) return null;
+                sourceName = DefaultFont.name;
+            }
+
+            newFont.name = $"[{modName}] {sourceName}";
+
+            if (cache)
+            {
+                if (!modFontCache.ContainsKey(modName))
+                    modFontCache[modName] = new Dictionary<string, TMP_FontAsset>();
+
+                modFontCache[modName][fontName] = newFont;
+            }
+
+            return newFont;
+        }
+
+        /// <summary>
+        /// Duplicates a font.
+        /// </summary>
+        /// <param name="currentFont">The font to duplicate</param>
+        /// <returns>The duplicated font or null.</returns>
+        public static TMP_FontAsset DuplicateFont(TMP_FontAsset currentFont)
+        {
+            if (currentFont == null) return null;
+
             TMP_FontAsset newFont;
             if (!string.IsNullOrWhiteSpace(currentFont.m_SourceFontFilePath) && File.Exists(currentFont.m_SourceFontFilePath))
                 newFont = TMP_FontAsset.CreateFontAsset(
@@ -224,31 +257,12 @@ namespace Fontifier
                 );
             else
             {
-                newFont = TMP_FontAsset.CreateFontAsset(
-                    DefaultFont.m_SourceFontFile,
-                    0,
-                    90,
-                    currentFont.atlasPadding,
-                    currentFont.atlasRenderMode,
-                    currentFont.atlasWidth,
-                    currentFont.atlasHeight,
-                    currentFont.atlasPopulationMode,
-                    currentFont.isMultiAtlasTexturesEnabled
-                );
-
                 Logger.BigError($"Font named {currentFont.name} does not have a source.");
+                return null;
             }
 
-            newFont.hideFlags = HideFlags.HideAndDontSave;
-            newFont.name = $"[{modName}] {currentFont.name}";
-
-            if (cache)
-            {
-                if (!modFontCache.ContainsKey(modName))
-                    modFontCache[modName] = new Dictionary<string, TMP_FontAsset>();
-
-                modFontCache[modName][fontName] = newFont;
-            }
+            newFont.hideFlags = currentFont.hideFlags;
+            newFont.name = $"{currentFont.name} (duplicated)";
 
             return newFont;
         }
