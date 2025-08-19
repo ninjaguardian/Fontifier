@@ -228,10 +228,10 @@ Get help and find other resources in the [Modding Discord](https://discord.gg/fs
 
 [![CC0-1.0 License](https://img.shields.io/badge/License-CC0_1.0_Universal-green.svg)](https://github.com/ninjaguardian/Fontifier?tab=CC0-1.0-1-ov-file)
 
-**Includes SixLabors.Fonts.dll** (© Six Labors, [Apache License 2.0](https://github.com/ninjaguardian/Fontifier?tab=Apache-2.0-2-ov-file))
+**Includes SixLabors.Fonts.dll** (© Six Labors, [Apache License 2.0](https://github.com/ninjaguardian/Fontifier?tab=Apache-2.0-3-ov-file))
 
-[![Apache License 2.0](https://img.shields.io/badge/License-Apache_License_2.0-green.svg)](https://github.com/ninjaguardian/Fontifier?tab=Apache-2.0-2-ov-file)
+[![Apache License 2.0](https://img.shields.io/badge/License-Apache_License_2.0-green.svg)](https://github.com/ninjaguardian/Fontifier?tab=Apache-2.0-3-ov-file)
 
-**Includes GoodDog Plain font** (© 1997 Fonthead Design, [Freeware](https://github.com/ninjaguardian/Fontifier/blob/master/LICENSE-GOODDOGP.txt))
+**Includes GoodDog Plain font** (© 1997 Fonthead Design, [Freeware](https://github.com/ninjaguardian/Fontifier?tab=License-2-ov-file))
 
-[![Freeware](https://img.shields.io/badge/License-Freeware-green.svg)](https://github.com/ninjaguardian/Fontifier/blob/master/LICENSE-GOODDOGP.txt)
+[![Freeware](https://img.shields.io/badge/License-Freeware-green.svg)](https://github.com/ninjaguardian/Fontifier?tab=License-2-ov-file)
