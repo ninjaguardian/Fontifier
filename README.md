@@ -6,7 +6,7 @@
 [![Thunderstore](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3.2.0/assets/cozy/documentation/website_vector.svg)](https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier)
 
 ## What is this?
-This mod lets you change the font of other mods' text. It also allows people to use this in their own mods (see 'For Devs').
+This mod lets you change the font of other mods' text. It also allows people to use this in their own mods (see '[For Devs](#for-devs)').
 
 ## Instructions
 1. Install [MelonLoader](https://github.com/LavaGang/MelonLoader)
