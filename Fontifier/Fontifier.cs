@@ -80,7 +80,7 @@ namespace Fontifier
     {
         #region Vars
         private const string ModDesc = "Enter a font from the Font List or leave it empty to use the default font.\n\nMake sure to hit enter!";
-        private readonly static bool OldML = Semver.SemVersion.Equals(MelonLoader.Properties.BuildInfo.VersionNumber, Semver.SemVersion.Parse("0.7.0"));
+        private static MelonLogger.Instance _logger;
         /// <summary>
         /// The logger.
         /// </summary>
@@ -88,7 +88,24 @@ namespace Fontifier
         {
             get
             {
-                if (OldML)
+                if (_logger != null) return _logger;
+
+                Type buildinfo = Type.GetType("MelonLoader.Properties.BuildInfo, MelonLoader") ?? Type.GetType("MelonLoader.BuildInfo, MelonLoader");
+                if (buildinfo == null)
+                {
+                    MelonLogger.Instance _logger = new("Fontifier");
+                    _logger.Error("Could not find MelonLoader.BuildInfo or MelonLoader.Properties.BuildInfo.");
+                    return _logger;
+                }
+                object version = buildinfo.GetProperty("VersionNumber", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
+                if (version == null)
+                {
+                    MelonLogger.Instance _logger = new("Fontifier");
+                    _logger.Error("Could not get MelonLoader version.");
+                    return _logger;
+                }
+
+                if (Semver.SemVersion.Equals(Semver.SemVersion.Parse("0.7.0"), (Semver.SemVersion)version))
                 {
                     dynamic color = Type.GetType("System.Drawing.Color, System.Drawing.Common")?.GetMethod(
                         "FromArgb",
@@ -98,12 +115,15 @@ namespace Fontifier
                         null
                     )?.Invoke(null, new object[] { 255, 0, 160, 230 });
                     if (color != null)
-                        return new("Fontifier", color);
+                    {
+                        _logger = new("Fontifier", color);
+                        return _logger;
+                    }
                     else
                     {
-                        MelonLogger.Instance logger = new("Fontifier");
-                        logger.Error("Detected MelonLoader 0.7.0 but couldn't use System.Drawing.Common");
-                        return logger;
+                        MelonLogger.Instance _logger = new("Fontifier");
+                        _logger.Error("Detected MelonLoader 0.7.0 but couldn't use System.Drawing.Common");
+                        return _logger;
                     }
                 }
                 else
@@ -116,12 +136,15 @@ namespace Fontifier
                         null
                     )?.Invoke(null, new object[] { (byte)255, (byte)0, (byte)160, (byte)230 });
                     if (color != null)
-                        return new("Fontifier", color);
+                    {
+                        _logger = new("Fontifier", color);
+                        return _logger;
+                    }
                     else
                     {
-                        MelonLogger.Instance logger = new("Fontifier");
-                        logger.Error("Detected MelonLoader 0.7.1+ but couldn't use MelonLoader.Logging.ColorARGB");
-                        return logger;
+                        MelonLogger.Instance _logger = new("Fontifier");
+                        _logger.Error("Detected MelonLoader 0.7.1+ but couldn't use MelonLoader.Logging.ColorARGB");
+                        return _logger;
                     }
                 }
             }
