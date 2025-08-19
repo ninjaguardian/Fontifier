@@ -24,6 +24,7 @@ using UnityEngine.TextCore.LowLevel;
 
 [assembly: MelonPlatformDomain(MelonPlatformDomainAttribute.CompatibleDomains.IL2CPP)]
 [assembly: VerifyLoaderVersion(FontifierModInfo.MLVersion, true)]
+[assembly: MelonOptionalDependencies("SixLabors.Fonts")]
 #endregion
 
 namespace Fontifier
@@ -117,6 +118,7 @@ namespace Fontifier
         /// Gets a font based on its name.
         /// </summary>
         /// <param name="fontName">The name of the font</param>
+        [Obsolete("Can caused unintended side effects. Use FontFromNameCopy if possible.")]
         public static TMP_FontAsset FontFromName(string fontName)
         {
             if (string.IsNullOrWhiteSpace(fontName))
@@ -144,7 +146,10 @@ namespace Fontifier
             if (cache && modFontCache.TryGetValue(modName, out Dictionary<string, TMP_FontAsset> fonts) && fonts.TryGetValue(fontName, out TMP_FontAsset font))
                 return font;
 
+            #pragma warning disable CS0618
             TMP_FontAsset newFont = UnityEngine.Object.Instantiate(FontFromName(fontName));
+            #pragma warning restore CS0618
+            newFont.hideFlags = HideFlags.HideAndDontSave;
             newFont.name = $"[{modName}] {newFont.name}";
 
             if (cache)
@@ -371,6 +376,7 @@ namespace Fontifier
         /// <param name="valueChanged">The function that will be ran when the value changes</param>
         /// <returns>1: Invoke to get the current TMP_FontAsset<br/>2: Gets a font based on its name</returns>
         /// <remarks>If possible, use <see cref="RegisterModCopy"/> instead as it is more safe.</remarks>
+        [Obsolete("Can caused unintended side effects. Use RegisterModCopy if possible.")]
         public static (Func<TMP_FontAsset>, Func<string, TMP_FontAsset>) RegisterMod(string modName, EventHandler<EventArgs> valueChanged)
         {
             ModSetting<string> setting = RegisterModBase(modName, valueChanged);
@@ -404,6 +410,7 @@ namespace Fontifier
         /// <param name="valueChanged">The function that will be ran when the value changes</param>
         /// <returns>Invoke to get the current TMP_FontAsset</returns>
         /// <remarks>If possible, use <see cref="RegisterModWithReferenceCopy"/> instead as it is more safe.</remarks>
+        [Obsolete("Can caused unintended side effects. Use RegisterModWithReferenceCopy if possible.")]
         public static Func<TMP_FontAsset> RegisterModWithReference(string modName, EventHandler<EventArgs> valueChanged)
         {
             ModSetting<string> setting = RegisterModWithReferenceBase(modName, valueChanged);
