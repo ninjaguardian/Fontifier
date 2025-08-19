@@ -313,7 +313,6 @@ jobs:
           Copy-Item -Path LICENSE-SixLaborsFonts.txt -Destination $binPath\artifactsetup
           Copy-Item -Path LICENSE-GOODDOGP.txt -Destination $binPath\artifactsetup
           Copy-Item -Path manifest.json -Destination $binPath\artifactsetup
-          Set-Content -Path "$binPath\artifactsetup\!UserLibs optional on Windows 6.1+.txt" -Value "UserLibs optional on Windows 6.1+"
           Write-Output "BINPATH=$binPath" >> $env:GITHUB_ENV
           ls -R $binPath\artifactsetup
 
