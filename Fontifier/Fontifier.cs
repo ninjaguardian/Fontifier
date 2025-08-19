@@ -79,7 +79,7 @@ namespace Fontifier
     /// </summary>
     public class Fontifier : MelonMod
     {
-        #region vars
+        #region Vars
         private const string ModDesc = "Enter a font from the Font List or leave it empty to use the default font.\n\nMake sure to hit enter!";
         /// <summary>
         /// The logger.
@@ -141,7 +141,7 @@ namespace Fontifier
         /// If false, it will just create it.</param>
         public static TMP_FontAsset FontFromNameCopy(string modName, string fontName, bool cache)
         {
-            if (cache && modFontCache.TryGetValue(modName, out var fonts) && fonts.TryGetValue(fontName, out var font))
+            if (cache && modFontCache.TryGetValue(modName, out Dictionary<string, TMP_FontAsset> fonts) && fonts.TryGetValue(fontName, out TMP_FontAsset font))
                 return font;
 
             TMP_FontAsset newFont = UnityEngine.Object.Instantiate(FontFromName(fontName));
@@ -261,13 +261,13 @@ namespace Fontifier
 
                     TournamentScoreboardText = () => (TextMeshPro)scoreboardText.GetValue(mod);
 
-                    TournamentScoringFont = RegisterModWithReference("RUMBLE Tournament Scoring", TournamentScoringChanged);
+                    TournamentScoringFont = RegisterModWithReferenceCopy("RUMBLE Tournament Scoring", TournamentScoringChanged);
 
                     HarmonyInstance.Patch(TournamentScoringPatch.TargetMethod(mod), postfix: TournamentScoringPatch.GetPostfix());
                 }
                 else if (mod.Info.Name.Equals("MatchInfo", StringComparison.OrdinalIgnoreCase))
                 {
-                    MatchInfoFont = RegisterModWithReference("MatchInfo", MatchInfoChanged);
+                    MatchInfoFont = RegisterModWithReferenceCopy("MatchInfo", MatchInfoChanged);
                     HarmonyInstance.Patch(MatchInfoPatch.TargetMethod(mod), postfix: MatchInfoPatch.GetPostfix());
                 }
             }
@@ -278,7 +278,7 @@ namespace Fontifier
         #endregion
 
         #region RUMBLE Tournament Scoring
-        private static Func<TMP_FontAsset> TournamentScoringFont;
+        private static Func<bool, TMP_FontAsset> TournamentScoringFont;
         private static Func<TextMeshPro> TournamentScoreboardText;
 
         static class TournamentScoringPatch
@@ -289,7 +289,7 @@ namespace Fontifier
             {
                 TextMeshPro scoreboardText = TournamentScoreboardText();
                 if (scoreboardText != null)
-                    scoreboardText.font = TournamentScoringFont();
+                    scoreboardText.font = TournamentScoringFont(true);
             }
 
             public static HarmonyMethod GetPostfix() => new(typeof(TournamentScoringPatch).GetMethod(nameof(Postfix)));
@@ -299,12 +299,12 @@ namespace Fontifier
         {
             TextMeshPro scoreboardText = TournamentScoreboardText();
             if (scoreboardText != null)
-                scoreboardText.font = FontFromName(((ValueChange<string>)args)?.Value);
+                scoreboardText.font = FontFromNameCopy("RUMBLE Tournament Scoring", ((ValueChange<string>)args)?.Value, true);
         }
         #endregion
 
         #region MatchInfo
-        private static Func<TMP_FontAsset> MatchInfoFont;
+        private static Func<bool, TMP_FontAsset> MatchInfoFont;
         private static GameObject MatchInfoGameObject;
         private static GameObject MatchInfoGymGameObject;
 
@@ -315,7 +315,7 @@ namespace Fontifier
             public static void Postfix(MelonMod __instance)
             {
                 Type modType = __instance.GetType();
-                TMP_FontAsset font = MatchInfoFont();
+                TMP_FontAsset font = MatchInfoFont(true);
 
                 MatchInfoGameObject = (GameObject)modType.GetField("matchInfoGameObject", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
                 if (MatchInfoGameObject == null)
@@ -340,7 +340,7 @@ namespace Fontifier
 
         private static void MatchInfoChanged(object sender, EventArgs args)
         {
-            TMP_FontAsset font = FontFromName(((ValueChange<string>)args)?.Value);
+            TMP_FontAsset font = FontFromNameCopy("MatchInfo", ((ValueChange<string>)args)?.Value, true);
 
             if (MatchInfoGameObject != null)
                 foreach (TextMeshPro tmp in MatchInfoGameObject.GetComponentsInChildren<TextMeshPro>(true))
