@@ -1,3 +1,11 @@
+# v1.1.3
+- Update to new cache system internally.
+- Depricate old system.
+- List SixLabors as optional.
+- Use RMAPI for assetbundles.
+- Fonts are now copied correctly.
+    - They also now have the correct flags.
+
 # v1.1.2
 - Add cache support for devs.
     - Each mod can have their own font instance so that one mod modifying their instance won't break every mod.

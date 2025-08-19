@@ -41,7 +41,7 @@ namespace Fontifier
         /// <summary>
         /// Mod version.
         /// </summary>
-        public const string ModVer = "1.1.2";
+        public const string ModVer = "1.1.3";
         /// <summary>
         /// Mod schema version.
         /// </summary>

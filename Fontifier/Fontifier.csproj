@@ -16,7 +16,7 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/ninjaguardian/Fontifier</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
-		<VersionPrefix>1.1.2</VersionPrefix>
+		<VersionPrefix>1.1.3</VersionPrefix>
 		<AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
 		<FileVersion>$(VersionPrefix).0</FileVersion>
 		<Platform>x64</Platform>
