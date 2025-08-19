@@ -5,7 +5,6 @@ using MelonLoader;
 using RumbleModUI;
 using System;
 using System.Collections.Generic;
-using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -24,7 +23,6 @@ using UnityEngine.TextCore.LowLevel;
 
 [assembly: MelonPlatformDomain(MelonPlatformDomainAttribute.CompatibleDomains.IL2CPP)]
 [assembly: VerifyLoaderVersion(FontifierModInfo.MLVersion, true)]
-[assembly: MelonOptionalDependencies("SixLabors.Fonts")]
 #endregion
 
 namespace Fontifier
@@ -41,7 +39,7 @@ namespace Fontifier
         /// <summary>
         /// Mod version.
         /// </summary>
-        public const string ModVer = "1.1.3";
+        public const string ModVer = "1.1.4";
         /// <summary>
         /// Mod schema version.
         /// </summary>
@@ -82,10 +80,52 @@ namespace Fontifier
     {
         #region Vars
         private const string ModDesc = "Enter a font from the Font List or leave it empty to use the default font.\n\nMake sure to hit enter!";
+        private readonly static bool OldML = Semver.SemVersion.Equals(MelonLoader.Properties.BuildInfo.VersionNumber, Semver.SemVersion.Parse("0.7.0"));
         /// <summary>
         /// The logger.
         /// </summary>
-        public readonly static MelonLogger.Instance Logger = new("Fontifier", System.Drawing.Color.FromArgb(255, 0, 160, 230));
+        public static MelonLogger.Instance Logger
+        {
+            get
+            {
+                if (OldML)
+                {
+                    dynamic color = Type.GetType("System.Drawing.Color, System.Drawing.Common")?.GetMethod(
+                        "FromArgb",
+                        BindingFlags.Public | BindingFlags.Static,
+                        null,
+                        new Type[] { typeof(int), typeof(int), typeof(int), typeof(int) },
+                        null
+                    )?.Invoke(null, new object[] { 255, 0, 160, 230 });
+                    if (color != null)
+                        return new("Fontifier", color);
+                    else
+                    {
+                        MelonLogger.Instance logger = new("Fontifier");
+                        logger.Error("Detected MelonLoader 0.7.0 but couldn't use System.Drawing.Common");
+                        return logger;
+                    }
+                }
+                else
+                {
+                    dynamic color = Type.GetType("MelonLoader.Logging.ColorARGB, MelonLoader").GetMethod(
+                        "FromArgb",
+                        BindingFlags.Public | BindingFlags.Static,
+                        null,
+                        new Type[] { typeof(byte), typeof(byte), typeof(byte), typeof(byte) },
+                        null
+                    )?.Invoke(null, new object[] { (byte)255, (byte)0, (byte)160, (byte)230 });
+                    if (color != null)
+                        return new("Fontifier", color);
+                    else
+                    {
+                        MelonLogger.Instance logger = new("Fontifier");
+                        logger.Error("Detected MelonLoader 0.7.1+ but couldn't use MelonLoader.Logging.ColorARGB");
+                        return logger;
+                    }
+                }
+            }
+        }
         /// <summary>
         /// All font names.
         /// </summary>
@@ -208,14 +248,6 @@ namespace Fontifier
         #endregion
 
         #region MODUI
-        private static string HandleSixLabors(string fontPath)
-        {
-            string familyName = new SixLabors.Fonts.FontCollection().Add(fontPath).Name;
-            if (string.IsNullOrWhiteSpace(familyName))
-                throw new Exception("Font has no internal family name");
-            return familyName;
-        }
-
         /// <inheritdoc/>
         public override void OnLateInitializeMelon() => UI.instance.UI_Initialized += OnUIInitialized;
 
@@ -228,8 +260,6 @@ namespace Fontifier
             ModUI.AddDescriptionAtStart("Description", "", "Lets you change the font for other mods.", new Tags { IsSummary = true });
 
             #region Load Fonts
-            bool windows = OperatingSystem.IsWindowsVersionAtLeast(6, 1);
-            if (!windows && Type.GetType("SixLabors.Fonts.FontCollection, SixLabors.Fonts") == null) Logger.BigError("PrivateFontCollection is not available on your OS and SixLabors is not present. Get SixLabors.Fonts.dll from the Fontifier download and put it in your UserLibs.");
             HashSet<string> existingNames = new(StringComparer.OrdinalIgnoreCase);
             foreach (string fontPath in
                 Directory.EnumerateFiles(@"UserData\Fontifier\fonts", "*.*", SearchOption.TopDirectoryOnly)
@@ -255,16 +285,9 @@ namespace Fontifier
                     string baseName;
                     try
                     {
-                        if (windows)
-                        {
-                            using PrivateFontCollection fontCollection = new();
-                            fontCollection.AddFontFile(fontPath);
-                            if (fontCollection.Families.Length == 0 || string.IsNullOrWhiteSpace(fontCollection.Families[0].Name))
-                                throw new Exception("Font has no internal family name");
-                            baseName = fontCollection.Families[0].Name;
-                        }
-                        else
-                            baseName = HandleSixLabors(fontPath);
+                        baseName = new SixLabors.Fonts.FontCollection().Add(fontPath).Name;
+                        if (string.IsNullOrWhiteSpace(baseName))
+                            throw new Exception("Font has no internal family name");
                     }
                     catch (Exception ex)
                     {

@@ -1,6 +1,10 @@
+# v1.1.4
+- Support ML 0.7.1
+- SixLabors (the UserLib) is now required again.
+
 # v1.1.3
 - Update to new cache system internally.
-- Depricate old system.
+- Deprecate old system.
 - List SixLabors as optional.
 - Use RMAPI for assetbundles.
 - Fonts are now copied correctly.

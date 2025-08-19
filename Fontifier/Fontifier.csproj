@@ -16,7 +16,7 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/ninjaguardian/Fontifier</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
-		<VersionPrefix>1.1.3</VersionPrefix>
+		<VersionPrefix>1.1.4</VersionPrefix>
 		<AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
 		<FileVersion>$(VersionPrefix).0</FileVersion>
 		<Platform>x64</Platform>
@@ -104,9 +104,6 @@
 		</Reference>
 		<Reference Include="RumbleModUIPlus">
 			<HintPath>$(LibsDirPath)\Mods\RumbleModUIPlus.dll</HintPath>
-		</Reference>
-		<Reference Include="System.Drawing.Common">
-			<HintPath>$(LibsDirPath)\MelonLoader\net6\System.Drawing.Common.dll</HintPath>
 		</Reference>
 		<Reference Include="Unity.TextMeshPro">
 			<HintPath>$(LibsDirPath)\MelonLoader\Il2CppAssemblies\Unity.TextMeshPro.dll</HintPath>

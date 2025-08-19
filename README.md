@@ -13,7 +13,7 @@ This mod lets you change the font of other mods' text. It also allows people to 
 2. Run RUMBLE without mods
 3. Drop Mods from .zip into RUMBLE's installation folder
 4. Drop UserData from .zip into RUMBLE's installation folder
-5. Drop UserLibs from .zip into RUMBLE's installation folder (Not required for Windows 6.1+)
+5. Drop UserLibs from .zip into RUMBLE's installation folder
 6. Install dependencies
     - [RumbleModdingAPI](https://thunderstore.io/c/rumble/p/UlvakSkillz/RumbleModdingAPI)
     - [RumbleModUI](https://thunderstore.io/c/rumble/p/Baumritter/RumbleModUI)
