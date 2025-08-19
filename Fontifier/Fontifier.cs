@@ -5,6 +5,7 @@ using MelonLoader;
 using RumbleModUI;
 using System;
 using System.Collections.Generic;
+using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -39,7 +40,7 @@ namespace Fontifier
         /// <summary>
         /// Mod version.
         /// </summary>
-        public const string ModVer = "1.1.1";
+        public const string ModVer = "1.1.2";
         /// <summary>
         /// Mod schema version.
         /// </summary>
@@ -103,19 +104,19 @@ namespace Fontifier
             get
             {
                 if (_defaultFont == null)
-                {
                     _defaultFont = Resources.FindObjectsOfTypeAll<TMP_FontAsset>()
                         .FirstOrDefault(font => font.name.Equals("GOODDP__ SDF Global Text Material", StringComparison.OrdinalIgnoreCase));
-                }
                 return _defaultFont;
             }
         }
+        private static readonly Dictionary<string, Dictionary<string, TMP_FontAsset>> modFontCache = new();
         #endregion
 
         #region Helper funcs
         /// <summary>
         /// Gets a font based on its name.
         /// </summary>
+        /// <param name="fontName">The name of the font</param>
         public static TMP_FontAsset FontFromName(string fontName)
         {
             if (string.IsNullOrWhiteSpace(fontName))
@@ -124,25 +125,52 @@ namespace Fontifier
             TMP_FontAsset font = fonts.FirstOrDefault(f => string.Equals(f.name, fontName, StringComparison.OrdinalIgnoreCase));
             if (font == null)
             {
-                Logger.Warning($"Font with name {fontName} is not loaded.");
+                Logger.Warning($"Font with name {fontName} is not loaded");
                 return DefaultFont;
             }
             return font;
         }
 
         /// <summary>
-        /// Gets a MelonMod based on its name.
+        /// Gets a font based on its name and copies it.
         /// </summary>
-        public static MelonMod MelonFromName(string melonName) => RegisteredMelons.FirstOrDefault(m => m.Info.Name == melonName);
+        /// <param name="modName">The name of your mod</param>
+        /// <param name="fontName">The name of the font</param>
+        /// <param name="cache">Should the cache be used?<br/>
+        /// If true, it will attempt to get the font from the cache, and if there is nothing, it will create and add it.<br/>
+        /// If false, it will just create it.</param>
+        public static TMP_FontAsset FontFromNameCopy(string modName, string fontName, bool cache)
+        {
+            if (cache && modFontCache.TryGetValue(modName, out var fonts) && fonts.TryGetValue(fontName, out var font))
+                return font;
+
+            TMP_FontAsset newFont = UnityEngine.Object.Instantiate(FontFromName(fontName));
+            newFont.name = $"[{modName}] {newFont.name}";
+
+            if (cache)
+            {
+                if (!modFontCache.ContainsKey(modName))
+                    modFontCache[modName] = new Dictionary<string, TMP_FontAsset>();
+
+                modFontCache[modName][fontName] = newFont;
+            }
+
+            return newFont;
+        }
         #endregion
 
-        /// <inheritdoc/>
-        public override void OnLateInitializeMelon()
+        #region MODUI
+        private static string HandleSixLabors(string fontPath)
         {
-            UI.instance.UI_Initialized += OnUIInitialized;
+            string familyName = new SixLabors.Fonts.FontCollection().Add(fontPath).Name;
+            if (string.IsNullOrWhiteSpace(familyName))
+                throw new Exception("Font has no internal family name");
+            return familyName;
         }
 
-        #region MODUI
+        /// <inheritdoc/>
+        public override void OnLateInitializeMelon() => UI.instance.UI_Initialized += OnUIInitialized;
+
         private void OnUIInitialized()
         {
             ModUI.ModName = "Fontifier";
@@ -151,6 +179,9 @@ namespace Fontifier
             ModUI.SetFolder("Fontifier");
             ModUI.AddDescriptionAtStart("Description", "", "Lets you change the font for other mods.", new Tags { IsSummary = true });
 
+            #region Load Fonts
+            bool windows = OperatingSystem.IsWindowsVersionAtLeast(6, 1);
+            if (!windows && Type.GetType("SixLabors.Fonts.FontCollection, SixLabors.Fonts") == null) Logger.BigError("PrivateFontCollection is not available on your OS and SixLabors is not present. Get SixLabors.Fonts.dll from the Fontifier download and put it in your UserLibs.");
             HashSet<string> existingNames = new(StringComparer.OrdinalIgnoreCase);
             foreach (string fontPath in
                 Directory.EnumerateFiles(@"UserData\Fontifier\fonts", "*.*", SearchOption.TopDirectoryOnly)
@@ -176,21 +207,25 @@ namespace Fontifier
                     string baseName;
                     try
                     {
-                        string familyName = new SixLabors.Fonts.FontCollection().Add(fontPath).Name;
-                        if (string.IsNullOrWhiteSpace(familyName))
-                            throw new Exception("Font has no internal family name.");
-                        baseName = familyName;
+                        if (windows)
+                        {
+                            using PrivateFontCollection fontCollection = new();
+                            fontCollection.AddFontFile(fontPath);
+                            if (fontCollection.Families.Length == 0 || string.IsNullOrWhiteSpace(fontCollection.Families[0].Name))
+                                throw new Exception("Font has no internal family name");
+                            baseName = fontCollection.Families[0].Name;
+                        }
+                        else
+                            baseName = HandleSixLabors(fontPath);
                     }
                     catch (Exception ex)
                     {
+                        Logger.Error($"Could not read internal font name for {fontPath}, using filename instead.", ex);
                         baseName = Path.GetFileNameWithoutExtension(fontPath);
-                        Logger.Warning($"Could not read internal font name for {fontPath}, using filename instead.", ex);
                     }
 
                     if (string.IsNullOrWhiteSpace(baseName))
-                    {
-                        throw new Exception("Font has an invalid name/filename.");
-                    }
+                        throw new Exception("Font has an invalid name/filename");
 
                     string candidate = baseName;
                     int suffix = 0;
@@ -209,6 +244,8 @@ namespace Fontifier
                     Logger.Error($"Failed to load font from {fontPath}", ex);
                 }
             }
+            #endregion
+
             ModUI.AddDescriptionAtIndex("Fonts List", "", "The following fonts are loaded:\n" + string.Join("\n", fonts.Select(f => f.name)), new Tags { IsEmpty = true }, 1);
 
             foreach (MelonMod mod in RegisteredMelons)
@@ -218,7 +255,7 @@ namespace Fontifier
                     FieldInfo scoreboardText = mod.GetType().GetField("scoreboardText", BindingFlags.Instance | BindingFlags.NonPublic);
                     if (scoreboardText == null)
                     {
-                        Logger.Warning("RUMBLE Tournament Scoring's scoreboardText FieldInfo is null.");
+                        Logger.Warning("RUMBLE Tournament Scoring's scoreboardText FieldInfo is null");
                         continue;
                     }
 
@@ -282,14 +319,14 @@ namespace Fontifier
 
                 MatchInfoGameObject = (GameObject)modType.GetField("matchInfoGameObject", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
                 if (MatchInfoGameObject == null)
-                    Logger.Warning("MatchInfo's matchInfoGameObject is null.");
+                    Logger.Warning("MatchInfo's matchInfoGameObject is null");
                 else
                     foreach (TextMeshPro tmp in MatchInfoGameObject.GetComponentsInChildren<TextMeshPro>(true))
                         tmp.font = font;
 
                 MatchInfoGymGameObject = (GameObject)modType.GetField("gymMatchInfoGameObject", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
                 if (MatchInfoGymGameObject == null)
-                    Logger.Warning("MatchInfo's gymMatchInfoGameObject is null.");
+                    Logger.Warning("MatchInfo's gymMatchInfoGameObject is null");
                 else
                 {
                     MatchInfoGymGameObject.GetComponent<TextMeshPro>().font = font;
@@ -319,18 +356,45 @@ namespace Fontifier
         #endregion
 
         #region Dev Stuff
+        private static ModSetting<string> RegisterModBase(string modName, EventHandler<EventArgs> valueChanged)
+        {
+            ModSetting<string> setting = ModUI.AddToList(modName, "", ModDesc, tags);
+            ModUI.AddValidation(modName, validator);
+            setting.CurrentValueChanged += valueChanged;
+            return setting;
+        }
+
         /// <summary>
         /// Register a mod to Fontifier.
         /// </summary>
         /// <param name="modName">The name of your MelonMod (this.Info.Name)</param>
         /// <param name="valueChanged">The function that will be ran when the value changes</param>
-        /// <returns>1: Invoke to get the current TMP_FontAsset, 2: Gets a font based on its name</returns>
+        /// <returns>1: Invoke to get the current TMP_FontAsset<br/>2: Gets a font based on its name</returns>
+        /// <remarks>If possible, use <see cref="RegisterModCopy"/> instead as it is more safe.</remarks>
         public static (Func<TMP_FontAsset>, Func<string, TMP_FontAsset>) RegisterMod(string modName, EventHandler<EventArgs> valueChanged)
+        {
+            ModSetting<string> setting = RegisterModBase(modName, valueChanged);
+            return (() => FontFromName((string)setting.Value), FontFromName);
+        }
+
+        /// <summary>
+        /// Register a mod to Fontifier and return the versions of the methods that copy.
+        /// </summary>
+        /// <param name="modName">The name of your MelonMod (this.Info.Name)</param>
+        /// <param name="valueChanged">The function that will be ran when the value changes</param>
+        /// <returns>1: Invoke to get the current TMP_FontAsset<br/>2: Gets a font based on its name</returns>
+        public static (Func<bool, TMP_FontAsset>, Func<string, bool, TMP_FontAsset>) RegisterModCopy(string modName, EventHandler<EventArgs> valueChanged)
+        {
+            ModSetting<string> setting = RegisterModBase(modName, valueChanged);
+            return ((cache) => FontFromNameCopy(modName, (string)setting.Value, cache), (fontName, cache) => FontFromNameCopy(modName, fontName, cache));
+        }
+
+        private static ModSetting<string> RegisterModWithReferenceBase(string modName, EventHandler<EventArgs> valueChanged)
         {
             ModSetting<string> setting = ModUI.AddToList(modName, "", ModDesc, tags);
             ModUI.AddValidation(modName, validator);
             setting.CurrentValueChanged += valueChanged;
-            return (() => FontFromName((string)setting.Value), FontFromName);
+            return setting;
         }
 
         /// <summary>
@@ -339,12 +403,26 @@ namespace Fontifier
         /// <param name="modName">The name of your MelonMod (this.Info.Name)</param>
         /// <param name="valueChanged">The function that will be ran when the value changes</param>
         /// <returns>Invoke to get the current TMP_FontAsset</returns>
+        /// <remarks>If possible, use <see cref="RegisterModWithReferenceCopy"/> instead as it is more safe.</remarks>
         public static Func<TMP_FontAsset> RegisterModWithReference(string modName, EventHandler<EventArgs> valueChanged)
         {
-            ModSetting<string> setting = ModUI.AddToList(modName, "", ModDesc, tags);
-            ModUI.AddValidation(modName, validator);
-            setting.CurrentValueChanged += valueChanged;
+            ModSetting<string> setting = RegisterModWithReferenceBase(modName, valueChanged);
             return () => FontFromName((string)setting.Value);
+        }
+
+        /// <summary>
+        /// Register a mod to Fontifier if you have a reference to the dll and return the version of the method that copies.
+        /// </summary>
+        /// <param name="modName">The name of your MelonMod (this.Info.Name)</param>
+        /// <param name="valueChanged">The function that will be ran when the value changes</param>
+        /// <returns>Invoke to get the current TMP_FontAsset.<br/>
+        /// You must pass in a bool: cache.<br/>
+        /// If true, it will attempt to get the font from the cache, and if there is nothing, it will create and add it.<br/>
+        /// If false, it will just create it.</returns>
+        public static Func<bool, TMP_FontAsset> RegisterModWithReferenceCopy(string modName, EventHandler<EventArgs> valueChanged)
+        {
+            ModSetting<string> setting = RegisterModWithReferenceBase(modName, valueChanged);
+            return (cache) => FontFromNameCopy(modName, (string)setting.Value, cache);
         }
         #endregion
     }

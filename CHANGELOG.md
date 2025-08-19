@@ -1,3 +1,8 @@
+# v1.1.2
+- Add cache support for devs.
+    - Each mod can have their own font instance so that one mod modifying their instance won't break every mod.
+- SixLabors (the UserLib) is now optional on Windows 6.1+
+
 # v1.1.1
 - Add support for [MatchInfo](https://thunderstore.io/c/rumble/p/UlvakSkillz/MatchInfo).
 - Make Description and Fonts List always on top.

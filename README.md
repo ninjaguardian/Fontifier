@@ -13,8 +13,8 @@ This mod lets you change the font of other mods' text. It also allows people to 
 2. Run RUMBLE without mods
 3. Drop Mods from .zip into RUMBLE's installation folder
 4. Drop UserData from .zip into RUMBLE's installation folder
-5. Drop UserLibs from .zip into RUMBLE's installation folder
-6. Install dependencies (If you want custom fonts)
+5. Drop UserLibs from .zip into RUMBLE's installation folder (Not required for Windows 6.1+)
+6. Install dependencies
     - [RumbleModUI](https://thunderstore.io/c/rumble/p/Baumritter/RumbleModUI)
     - [RumbleModUIPlus](https://thunderstore.io/c/rumble/p/ninjaguardian/RumbleModUIPlus)
 7. Play RUMBLE!
@@ -73,8 +73,40 @@ First, choose if you want Fontifier to be a required dependency or optional depe
 
   </details>
 
-- <details><summary>And this code:</summary>
-    (Place it in your MelonMod class)
+- <details><summary>And this code if your code will modify the returned font: (safest)</summary>
+    Whenever you call a method, it will create a new instance of the font unless you specify cache.
+
+    Caching will make it so that when you call those methods and get a font, if you call it again, it won't make a new one unless your mod has not called this method for that specific font yet. Each mod has its own cache.
+
+    If you want this, wherever it says `[CACHE]`, replace it with true. Otherwise, replace it with false. Caching is recommended.
+
+    (Place this in your MelonMod class)
+
+    ```c#
+    #region Fontifier
+    private static Func<bool, TMP_FontAsset> GetFont;
+
+    /// <inheritdoc/>
+    public override void OnInitializeMelon()
+    {
+        GetFont = RegisterModWithReferenceCopy(this.Info.Name, new EventHandler<EventArgs>(FontChanged));
+    }
+
+    private static void FontChanged(object sender, EventArgs args)
+    {
+        // Change your TextMeshPro.font to the new font.
+        TextMeshProInstance.font = FontFromNameCopy(this.Info.Name, ((dynamic)args).Value, [CACHE]);
+    }
+    #endregion
+    ```
+
+    ALSO: When you create the TextMeshPro, make sure to `TextMeshProInstance.font = GetFont([CACHE]);`
+  </details>
+
+- <details><summary>And this code if your code will only use the font to set the font for text and will not modify it:</summary>
+    The returned font, if modified, will modify EVERY MOD'S FONTS. Only use this if needed. The font could be modified in unexpected ways. In most cases, the above is best option because of its safety.
+
+    (Place this in your MelonMod class)
 
     ```c#
     #region Fontifier
@@ -123,8 +155,41 @@ First, choose if you want Fontifier to be a required dependency or optional depe
 
   </details>
 
-- <details><summary>And this code:</summary>
-    (Place it in your MelonMod class)
+- <details><summary>And this code if your code will modify the returned font: (safest)</summary>
+    Whenever you call a method, it will create a new instance of the font unless you specify cache.
+
+    Caching will make it so that when you call those methods and get a font, if you call it again, it won't make a new one unless your mod has not called this method for that specific font yet. Each mod has its own cache.
+
+    If you want this, wherever it says `[CACHE]`, replace it with true. Otherwise, replace it with false. Caching is recommended.
+
+    (Place this in your MelonMod class)
+
+    ```c#
+    #region Fontifier
+    private static Func<bool, TMP_FontAsset> GetFont;
+    private static Func<string, bool, TMP_FontAsset> FontFromName;
+
+    /// <inheritdoc/>
+    public override void OnInitializeMelon()
+    {
+        if (FindMelon("Fontifier", "ninjaguardian")?.GetType() is Type fontifierType && fontifierType != null) (GetFont, FontFromName) = ((Func<TMP_FontAsset>, Func<string, TMP_FontAsset>))fontifierType.GetMethod("RegisterModCopy", BindingFlags.Public | BindingFlags.Static)?.Invoke(null, new object[] { this.Info.Name, new EventHandler<EventArgs>(FontChanged) });
+    }
+
+    private static void FontChanged(object sender, EventArgs args)
+    {
+        // Change your TextMeshPro.font to the new font.
+        TextMeshProInstance.font = FontFromName(((dynamic)args).Value, [CACHE]);
+    }
+    #endregion
+    ```
+
+    ALSO: When you create the TextMeshPro, make sure to `TextMeshProInstance.font = GetFont([CACHE]);`
+  </details>
+
+- <details><summary>And this code if your code will only use the font to set the font for text and will not modify it:</summary>
+    The returned font, if modified, will modify EVERY MOD'S FONTS. Only use this if needed. The font could be modified in unexpected ways. In most cases, the above is best option because of its safety.
+
+    (Place this in your MelonMod class)
 
     ```c#
     #region Fontifier
@@ -134,7 +199,7 @@ First, choose if you want Fontifier to be a required dependency or optional depe
     /// <inheritdoc/>
     public override void OnInitializeMelon()
     {
-        if (RegisteredMelons.FirstOrDefault(m => m.Info.Name == "Fontifier")?.GetType() is Type fontifierType && fontifierType != null) (GetFont, FontFromName) = ((Func<TMP_FontAsset>, Func<string, TMP_FontAsset>))fontifierType.GetMethod("RegisterMod", BindingFlags.Public | BindingFlags.Static)?.Invoke(null, new object[] { this.Info.Name, new EventHandler<EventArgs>(FontChanged) });
+        if (FindMelon("Fontifier", "ninjaguardian")?.GetType() is Type fontifierType && fontifierType != null) (GetFont, FontFromName) = ((Func<TMP_FontAsset>, Func<string, TMP_FontAsset>))fontifierType.GetMethod("RegisterMod", BindingFlags.Public | BindingFlags.Static)?.Invoke(null, new object[] { this.Info.Name, new EventHandler<EventArgs>(FontChanged) });
     }
 
     private static void FontChanged(object sender, EventArgs args)
