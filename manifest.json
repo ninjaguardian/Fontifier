@@ -6,6 +6,7 @@
     "dependencies": [
         "LavaGang-MelonLoader-0.7.0",
         "Baumritter-RumbleModUI-2.1.2",
-        "ninjaguardian-RumbleModUIPlus-1.0.2"
+        "ninjaguardian-RumbleModUIPlus-1.0.2",
+        "UlvakSkillz-RumbleModdingAPI-4.0.0"
     ]
 }

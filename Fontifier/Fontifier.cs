@@ -93,23 +93,7 @@ namespace Fontifier
         private readonly static RumbleModUIPlus.Mod ModUI = new();
         private readonly static Tags tags = new();
         private readonly static FontNameValidator validator = new();
-        /// <summary>
-        /// Use DefaultFont instead.
-        /// </summary>
-        private static TMP_FontAsset _defaultFont;
-        /// <summary>
-        /// Don't set this.
-        /// </summary>
-        private static TMP_FontAsset DefaultFont
-        {
-            get
-            {
-                if (_defaultFont == null)
-                    _defaultFont = Resources.FindObjectsOfTypeAll<TMP_FontAsset>()
-                        .FirstOrDefault(font => font.name.Equals("GOODDP__ SDF Global Text Material", StringComparison.OrdinalIgnoreCase));
-                return _defaultFont;
-            }
-        }
+        private static TMP_FontAsset DefaultFont;
         private static readonly Dictionary<string, Dictionary<string, TMP_FontAsset>> modFontCache = new();
         #endregion
 
@@ -147,10 +131,53 @@ namespace Fontifier
                 return font;
 
             #pragma warning disable CS0618
-            TMP_FontAsset newFont = UnityEngine.Object.Instantiate(FontFromName(fontName));
+            TMP_FontAsset currentFont = FontFromName(fontName);
             #pragma warning restore CS0618
+
+            TMP_FontAsset newFont;
+            if (!string.IsNullOrWhiteSpace(currentFont.m_SourceFontFilePath) && File.Exists(currentFont.m_SourceFontFilePath))
+                newFont = TMP_FontAsset.CreateFontAsset(
+                    currentFont.m_SourceFontFilePath,
+                    0,
+                    90,
+                    currentFont.atlasPadding,
+                    currentFont.atlasRenderMode,
+                    currentFont.atlasWidth,
+                    currentFont.atlasHeight,
+                    currentFont.atlasPopulationMode,
+                    currentFont.isMultiAtlasTexturesEnabled
+                );
+            else if (currentFont.m_SourceFontFile != null)
+                newFont = TMP_FontAsset.CreateFontAsset(
+                    currentFont.m_SourceFontFile,
+                    0,
+                    90,
+                    currentFont.atlasPadding,
+                    currentFont.atlasRenderMode,
+                    currentFont.atlasWidth,
+                    currentFont.atlasHeight,
+                    currentFont.atlasPopulationMode,
+                    currentFont.isMultiAtlasTexturesEnabled
+                );
+            else
+            {
+                newFont = TMP_FontAsset.CreateFontAsset(
+                    DefaultFont.m_SourceFontFile,
+                    0,
+                    90,
+                    currentFont.atlasPadding,
+                    currentFont.atlasRenderMode,
+                    currentFont.atlasWidth,
+                    currentFont.atlasHeight,
+                    currentFont.atlasPopulationMode,
+                    currentFont.isMultiAtlasTexturesEnabled
+                );
+
+                Logger.BigError($"Font named {currentFont.name} does not have a source.");
+            }
+
             newFont.hideFlags = HideFlags.HideAndDontSave;
-            newFont.name = $"[{modName}] {newFont.name}";
+            newFont.name = $"[{modName}] {currentFont.name}";
 
             if (cache)
             {
@@ -161,6 +188,22 @@ namespace Fontifier
             }
 
             return newFont;
+        }
+
+        /// <inheritdoc/>
+        public override void OnInitializeMelon()
+        {
+            DefaultFont = TMP_FontAsset.CreateFontAsset(
+                RumbleModdingAPI.Calls.LoadAssetFromStream<Font>(this, $"{FontifierModInfo.ModName}.gooddogfont", "GOODDP__"),
+                0,
+                90,
+                5,
+                GlyphRenderMode.SDFAA,
+                1024,
+                1024
+            );
+            DefaultFont.hideFlags = HideFlags.HideAndDontSave;
+            DefaultFont.name = "Default - GOODDP__";
         }
         #endregion
 

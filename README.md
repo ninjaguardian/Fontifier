@@ -15,6 +15,7 @@ This mod lets you change the font of other mods' text. It also allows people to 
 4. Drop UserData from .zip into RUMBLE's installation folder
 5. Drop UserLibs from .zip into RUMBLE's installation folder (Not required for Windows 6.1+)
 6. Install dependencies
+    - [RumbleModdingAPI](https://thunderstore.io/c/rumble/p/UlvakSkillz/RumbleModdingAPI)
     - [RumbleModUI](https://thunderstore.io/c/rumble/p/Baumritter/RumbleModUI)
     - [RumbleModUIPlus](https://thunderstore.io/c/rumble/p/ninjaguardian/RumbleModUIPlus)
 7. Play RUMBLE!
@@ -57,7 +58,7 @@ First, choose if you want Fontifier to be a required dependency or optional depe
     using Il2CppTMPro;
     using MelonLoader;
     using static Fontifier.Fontifier;
-    // The following two are needed if ImplicitUsings are disabled
+    // The following is needed if ImplicitUsings are disabled
     using System;
     ```
   </details>
@@ -104,7 +105,7 @@ First, choose if you want Fontifier to be a required dependency or optional depe
   </details>
 
 - <details><summary>And this code if your code will only use the font to set the font for text and will not modify it:</summary>
-    The returned font, if modified, will modify EVERY MOD'S FONTS. Only use this if needed. The font could be modified in unexpected ways. In most cases, the above is best option because of its safety.
+    The returned font, if modified, will modify EVERY MOD'S FONTS. Only use this if needed. The font could be modified in unexpected ways. In most cases, the above is best option because of its safety. This is mostly here for legacy support.
 
     (Place this in your MelonMod class)
 
@@ -140,9 +141,8 @@ First, choose if you want Fontifier to be a required dependency or optional depe
     using Il2CppTMPro;
     using MelonLoader;
     using System.Reflection;
-    // The following two are needed if ImplicitUsings is disabled
+    // The following is needed if ImplicitUsings is disabled
     using System;
-    using System.Linq;
     ```
   </details>
 
@@ -187,7 +187,7 @@ First, choose if you want Fontifier to be a required dependency or optional depe
   </details>
 
 - <details><summary>And this code if your code will only use the font to set the font for text and will not modify it:</summary>
-    The returned font, if modified, will modify EVERY MOD'S FONTS. Only use this if needed. The font could be modified in unexpected ways. In most cases, the above is best option because of its safety.
+    The returned font, if modified, will modify EVERY MOD'S FONTS. Only use this if needed. The font could be modified in unexpected ways. In most cases, the above is best option because of its safety. This is mostly here for legacy support.
 
     (Place this in your MelonMod class)
 
@@ -231,3 +231,7 @@ Get help and find other resources in the [Modding Discord](https://discord.gg/fs
 **Includes SixLabors.Fonts.dll** (© Six Labors, [Apache License 2.0](https://github.com/ninjaguardian/Fontifier?tab=Apache-2.0-2-ov-file))
 
 [![Apache License 2.0](https://img.shields.io/badge/License-Apache_License_2.0-green.svg)](https://github.com/ninjaguardian/Fontifier?tab=Apache-2.0-2-ov-file)
+
+**Includes GoodDog Plain font** (© 1997 Fonthead Design, [Freeware](https://github.com/ninjaguardian/Fontifier/blob/master/LICENSE-GOODDOGP.txt))
+
+[![Freeware](https://img.shields.io/badge/License-Freeware-green.svg)](https://github.com/ninjaguardian/Fontifier/blob/master/LICENSE-GOODDOGP.txt)
