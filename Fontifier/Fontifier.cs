@@ -10,13 +10,12 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.TextCore.LowLevel;
-using static RumbleModdingAPI.Calls.GameObjects.Gym.LOGIC.Heinhouserproducts.MoveLearning.MoveLearnSelector.Model.UI;
 
 // TODO: Make ModUI show what the fonts look like.
 // TODO: Font size changer (especialy for MatchInfo in gym + CRUMBLE)
 
 #region Assemblies
-[assembly: MelonInfo(typeof(Fontifier.Fontifier), FontifierModInfo.ModName, FontifierModInfo.ModVer, "ninjaguardian", "https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier")]
+[assembly: MelonInfo(typeof(Fontifier.Fontifier), FontifierModInfo.ModName, FontifierModInfo.ModVersion, FontifierModInfo.Author, FontifierModInfo.DownloadLink)]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
 
 [assembly: MelonColor(255, 0, 160, 230)]
@@ -40,7 +39,7 @@ namespace Fontifier
         /// <summary>
         /// Mod version.
         /// </summary>
-        public const string ModVer = "1.1.4";
+        public const string ModVersion = "1.1.4";
         /// <summary>
         /// Mod schema version.
         /// </summary>
@@ -49,6 +48,14 @@ namespace Fontifier
         /// Melonloader Version.
         /// </summary>
         public const string MLVersion = "0.7.0";
+        /// <summary>
+        /// Mod author.
+        /// </summary>
+        public const string Author = "ninjaguardian";
+        /// <summary>
+        /// Mod download link.
+        /// </summary>
+        public const string DownloadLink = "https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier";
     }
 
     /// <summary>
@@ -106,7 +113,7 @@ namespace Fontifier
                     return _logger;
                 }
 
-                if (Semver.SemVersion.Equals(Semver.SemVersion.Parse("0.7.0"), (Semver.SemVersion)version))
+                if (Semver.SemVersion.Parse("0.7.0").Equals(version))
                 {
                     dynamic color = Type.GetType("System.Drawing.Color, System.Drawing.Common")?.GetMethod(
                         "FromArgb",
@@ -284,14 +291,14 @@ namespace Fontifier
         }
         #endregion
 
-        #region MODUI
+        #region ModUI
         /// <inheritdoc/>
         public override void OnLateInitializeMelon() => UI.instance.UI_Initialized += OnUIInitialized;
 
         private void OnUIInitialized()
         {
             ModUI.ModName = "Fontifier";
-            ModUI.ModVersion = FontifierModInfo.ModVer;
+            ModUI.ModVersion = FontifierModInfo.ModVersion;
             ModUI.ModFormatVersion = FontifierModInfo.ModSchemaVer;
             ModUI.SetFolder("Fontifier");
             ModUI.AddDescriptionAtStart("Description", "", "Lets you change the font for other mods.", new Tags { IsSummary = true });
@@ -371,12 +378,12 @@ namespace Fontifier
 
                     TournamentScoringFont = RegisterModWithReferenceCopy("RUMBLE Tournament Scoring", TournamentScoringChanged);
 
-                    HarmonyInstance.Patch(TournamentScoringPatch.TargetMethod(mod), postfix: TournamentScoringPatch.GetPostfix());
+                    HarmonyInstance.Patch(TournamentScoringPatch.TargetMethod(mod), postfix: TournamentScoringPatch.GetPostfix);
                 }
                 else if (mod.Info.Name.Equals("MatchInfo", StringComparison.OrdinalIgnoreCase))
                 {
                     MatchInfoFont = RegisterModWithReferenceCopy("MatchInfo", MatchInfoChanged);
-                    HarmonyInstance.Patch(MatchInfoPatch.TargetMethod(mod), postfix: MatchInfoPatch.GetPostfix());
+                    HarmonyInstance.Patch(MatchInfoPatch.TargetMethod(mod), postfix: MatchInfoPatch.GetPostfix);
                 }
             }
 
@@ -400,7 +407,7 @@ namespace Fontifier
                     scoreboardText.font = TournamentScoringFont(true);
             }
 
-            public static HarmonyMethod GetPostfix() => new(typeof(TournamentScoringPatch).GetMethod(nameof(Postfix)));
+            public static HarmonyMethod GetPostfix => new(typeof(TournamentScoringPatch).GetMethod(nameof(Postfix)));
         }
 
         private static void TournamentScoringChanged(object sender, EventArgs args)
@@ -443,7 +450,7 @@ namespace Fontifier
                 }
             }
 
-            public static HarmonyMethod GetPostfix() => new(typeof(MatchInfoPatch).GetMethod(nameof(Postfix)));
+            public static HarmonyMethod GetPostfix => new(typeof(MatchInfoPatch).GetMethod(nameof(Postfix)));
         }
 
         private static void MatchInfoChanged(object sender, EventArgs args)

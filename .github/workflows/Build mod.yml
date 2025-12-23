@@ -1,29 +1,37 @@
 name: Build, Release, and Version Check
 
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "*" ]
     tags: [ "v*" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "*" ]
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    environment: check
 
     outputs:
       dllversion: ${{ steps.setversion.outputs.dllversion }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            manifest.json
+            ${{ vars.CSPROJ_LOCATION }}
+            ${{ vars.BUILDINFO_LOCATION }}
+            CHANGELOG.md
 
       - name: Get version from manifest
         id: setversion
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $version = (Get-Content manifest.json | ConvertFrom-Json).version_number
           Write-Output "VERSIONNUM=$version" >> $env:GITHUB_ENV
           Write-Output "dllversion=$version" >> $env:GITHUB_OUTPUT
@@ -32,7 +40,7 @@ jobs:
       - name: Check .csproj
         shell: bash
         run: |
-          version_number=$(awk -F'[<>]' '/<VersionPrefix>/ {print $3}' Fontifier/Fontifier.csproj)
+          version_number=$(awk -F'[<>]' '/<VersionPrefix>/ {print $3}' ${{ vars.CSPROJ_LOCATION }})
           if [ "$version_number" != "$VERSIONNUM" ]; then
             echo "Error: got version $version_number, expected $VERSIONNUM"
             exit 1
@@ -41,7 +49,7 @@ jobs:
       - name: Check .cs
         shell: bash
         run: |
-          version_number=$(awk -F'"' '/ModVer *= *"/ {ver=$2} END {print ver}' Fontifier/Fontifier.cs)
+          version_number=$(awk -F'"' '/const string ModVersion/ {print $2; exit}' ${{ vars.BUILDINFO_LOCATION }})
           if [ "$version_number" != "$VERSIONNUM" ]; then
             echo "Error: got version $version_number, expected $VERSIONNUM"
             exit 1
@@ -68,17 +76,19 @@ jobs:
   build:
     needs: check
     runs-on: windows-latest
+    environment: build
 
     env:
       LIBSDIRPATH: ${{ github.workspace }}\deps
       DLLVERSION: ${{ needs.check.outputs.dllversion }}
         
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Get deps hash
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $dependencies = (Get-Content manifest.json | ConvertFrom-Json).dependencies -join "`n"
           $bytes = [System.Text.Encoding]::UTF8.GetBytes($dependencies)
           $memoryStream = [System.IO.MemoryStream]::new($bytes)
@@ -91,22 +101,23 @@ jobs:
       - name: Restore Thunderstore deps cache
         if: ${{ env.DEPSHASH != '' }}
         id: cache-deps
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           key: thunderstore-deps-${{ env.DEPSHASH }}
-          path: deps
+          path: ${{ env.LIBSDIRPATH }}
 
       - name: Download dependencies
         if: steps.cache-deps.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $deps = (Get-Content manifest.json | ConvertFrom-Json).dependencies
-          New-Item -ItemType Directory -Force -Path deps | Out-Null
+          New-Item -ItemType Directory -Force -Path $env:LIBSDIRPATH | Out-Null
           foreach ($dep in $deps) {
             $parts = $dep -split '-'
             $user = $parts[0]; $pkg = $parts[1]; $ver = $parts[2]
             $url = "https://thunderstore.io/package/download/$user/$pkg/$ver"
-            $out = "deps\$($user)-$($pkg)-$($ver).zip"
+            $out = Join-Path $env:LIBSDIRPATH "$($user)-$($pkg)-$($ver).zip"
             Write-Host "Fetching $url → $out"
             Invoke-WebRequest -Uri $url -OutFile $out
           }
@@ -115,17 +126,20 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
-          Get-ChildItem deps\*.zip | ForEach-Object {
+          $ErrorActionPreference = 'Stop'
+          $detectionPath = Join-Path $env:LIBSDIRPATH "*.zip"
+          Get-ChildItem $detectionPath | ForEach-Object {
             $zip = $_.FullName
             Write-Host "Extracting $zip"
-            Expand-Archive -Path $zip -DestinationPath deps -Force
+            Expand-Archive -Path $zip -DestinationPath $env:LIBSDIRPATH -Force
           }
 
       - name: Clean files in deps
         if: steps.cache-deps.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
-          $removedFiles = Get-ChildItem -Path "deps" -File | Where-Object { $_.Name -ne "version.dll" }
+          $ErrorActionPreference = 'Stop'
+          $removedFiles = Get-ChildItem -Path $env:LIBSDIRPATH -File | Where-Object { $_.Name -ne "version.dll" }
           foreach ($file in $removedFiles) {
             Write-Host "Removing file: $($file.FullName)"
             Remove-Item -Path $file.FullName -Force
@@ -133,14 +147,17 @@ jobs:
 
       - name: Save Thunderstore deps cache
         if: ${{ env.DEPSHASH != '' && steps.cache-deps.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           key: thunderstore-deps-${{ env.DEPSHASH }}
-          path: deps
+          path: ${{ env.LIBSDIRPATH }}
 
       - name: Download steamcmd
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Path "steamcmdstuff" -Force
+          Set-Location steamcmdstuff
           $steamcmdUrl = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip"
           $steamcmdZip = "steamcmd.zip"
           Write-Host "Downloading steamcmd from $steamcmdUrl"
@@ -151,6 +168,8 @@ jobs:
       - name: Install steamcmd
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location steamcmdstuff
           .\steamcmd.exe +quit
           $code = $LASTEXITCODE
           if ($code -eq 7) {
@@ -162,6 +181,8 @@ jobs:
       - name: Get RUMBLE version
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location steamcmdstuff
           $output = .\steamcmd.exe +login anonymous +app_info_print 890550 +quit
 
           $branchesIndex = -1
@@ -208,68 +229,151 @@ jobs:
             Write-Host "Output from steamcmd:`n$output"
           }
 
-      - name: Get MelonLoader version
+      - name: Cleanup steamcmd
         shell: pwsh
-        run: |
-          $melon_ver = ((Get-Content manifest.json | ConvertFrom-Json).dependencies | Where-Object { $_ -match 'MelonLoader' }) -replace '.*-',''
-          Write-Output "MELONLOADERVER=$melon_ver" >> $env:GITHUB_ENV
-          Write-Host "MELONLOADERVER=$melon_ver"
+        run: Remove-Item steamcmdstuff -Recurse -Force
 
-      - name: Restore il2cpp cache
-        id: cache-il2cpp
-        if: ${{ env.RUMBLEVER != '' && env.MELONLOADERVER != '' }}
-        uses: actions/cache/restore@v4
+      - name: Setup .NET SDK 10
+        uses: actions/setup-dotnet@v5
         with:
-          key: il2cpp-${{ env.RUMBLEVER }}-${{ env.MELONLOADERVER }}
-          path: deps\MelonLoader\Il2CppAssemblies
+          dotnet-version: '10'
 
-      - name: Decode Steam config
-        if: steps.cache-il2cpp.outputs.cache-hit != 'true'
+      - name: Install Powershell and 7z
         shell: pwsh
         run: |
-          $content = @"
-          ${{ secrets.STEAM_CERTIFICATE }}
-          "@
-          $content | Out-File -Encoding ascii steamconfig.b64
-          if (Test-Path "config\config.vdf") { Remove-Item "config\config.vdf" -Force }
-          certutil -decode steamconfig.b64 config\config.vdf
+          $ErrorActionPreference = 'Stop'
+          winget upgrade winget --accept-package-agreements --accept-source-agreements --disable-interactivity
+          # TODO: switch off preview. make sure to change other steps that use preview. also remove install entirely when gh actions supports powershell with .net 10
+          winget install Microsoft.PowerShell.Preview --disable-interactivity
+          $Url = "https://www.7-zip.org/download.html"
+          $Html = Invoke-WebRequest -Uri $Url
+          $Html.Content -match 'Download 7-Zip (\d+\.\d+)'
+          $ver = $matches[1] -replace '\D', ''
+          $link = "https://www.7-zip.org/a/7z$($ver)-x64.msi"
+          Write-Host "Installing $($link)"
+          $msi = "$env:TEMP\7z.msi"
+          Invoke-WebRequest $link -OutFile $msi
+          msiexec /i $msi /quiet /norestart
+          Write-Host "Installed 7z"
 
-      - name: Setup install dir
-        if: steps.cache-il2cpp.outputs.cache-hit != 'true'
-        shell: cmd
-        run: steamcmd +force_install_dir .\deps\ +login ${{ secrets.STEAM_USERNAME }} +app_update 890550 validate +quit
+      - name: Checkout assemblies
+        uses: actions/checkout@v6
+        with:
+          repository: plumguardian/il2cppassemblies
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          path: il2cppassembliesrepo
 
-      - name: Run EXE until folder exists
-        if: steps.cache-il2cpp.outputs.cache-hit != 'true'
+      - name: Setup powershell
         shell: pwsh
+        run: echo "C:\Program Files\PowerShell" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Unpack assembly
+        shell: 7-preview\pwsh.exe -command "Copy-Item '{0}' '{0}.ps1'; . '{0}.ps1'"
+        env:
+          IL2CPPASSEMBLIES7ZIPPASSWORD: ${{ secrets.IL2CPPASSEMBLIES7ZIPPASSWORD }}
+          PK8_B64: ${{ secrets.PK8 }}
         run: |
-          $folderPath = "deps\MelonLoader\Il2CppAssemblies\"
+          $ErrorActionPreference = 'Stop'
+          $unpackDir = "unpackassembly"
+          New-Item -ItemType Directory -Path $unpackDir -Force
+          $assemblyParent = Join-Path $env:GITHUB_WORKSPACE 'il2cppassembliesrepo'
+          $assemblyPath = Join-Path $assemblyParent $env:RUMBLEVER
+          Set-Location $unpackDir
 
-          Start-Process -FilePath "deps\RUMBLE.exe"
+          Write-Host "Assembly path: $($assemblyPath)"
+          if (-not (Test-Path $assemblyPath)) { throw "Assembly does not exist: $assemblyPath" }
+          $inPqc = Join-Path (Get-Location).Path 'stuff.pqc'
+          Copy-Item -Path $assemblyPath -Destination $inPqc -Force -ErrorAction Stop
+          if (-not (Test-Path $inPqc)) { throw "Input PQC file not found: $inPqc" }
 
-          $timeout = 600
-          $elapsed = 0
-          while (-not (Test-Path $folderPath) -and $elapsed -lt $timeout) {
-            Start-Sleep -Seconds 1
-            $elapsed++
+          $decryptDir = Join-Path (Get-Location).Path 'decrypt'
+          New-Item -ItemType Directory -Path $decryptDir -Force
+
+          $outExtractDir = Join-Path $env:GITHUB_WORKSPACE 'assembliesout'
+          New-Item -ItemType Directory -Path $outExtractDir -Force
+
+          $pk8Dir = Join-Path (Get-Location).Path 'gen'
+          $pk8Path = Join-Path $pk8Dir 'key.pk8'
+          New-Item -ItemType Directory -Path $pk8Dir -Force
+
+          if (-not $env:PK8_B64) { throw "Secret PK8_B64 not provided." }
+          [IO.File]::WriteAllBytes($pk8Path, [Convert]::FromBase64String($env:PK8_B64))
+
+          if (-not [System.Security.Cryptography.MLKem]::IsSupported) {
+            throw "ML-KEM not supported on this runner (.NET 10 MLKem API unavailable)."
           }
 
-          if (-not (Test-Path $folderPath)) {
-            Write-Error "Timed out waiting for folder: $folderPath"
-            exit 1
-          } else {
-            Start-Sleep -Seconds 10
-          }
+          $br = [IO.BinaryReader]::new([IO.File]::OpenRead($inPqc))
+          $magic = [Text.Encoding]::ASCII.GetString($br.ReadBytes(4))
+          if ($magic -ne "PQC1") { throw "Invalid PQC container magic: $magic" }
+          $version = $br.ReadByte()
+          $ctLen = $br.ReadInt32()
+          $ct = $br.ReadBytes($ctLen)
+          $nonceLen = $br.ReadInt32()
+          $nonce = $br.ReadBytes($nonceLen)
+          $tagLen = $br.ReadInt32()
+          $tag = $br.ReadBytes($tagLen)
+          $cipherLen = $br.ReadInt64()
+          $cipherText = $br.ReadBytes([int]$cipherLen)
+          $br.Close()
 
-      - name: Save il2cpp cache
-        if: ${{ env.RUMBLEVER != '' && env.MELONLOADERVER != '' && steps.cache-il2cpp.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
-        with:
-          key: il2cpp-${{ env.RUMBLEVER }}-${{ env.MELONLOADERVER }}
-          path: deps\MelonLoader\Il2CppAssemblies
+          $pkcs8 = [IO.File]::ReadAllBytes($pk8Path)
+          $dec = [System.Security.Cryptography.MLKem]::ImportPkcs8PrivateKey($pkcs8)
+          $shared = New-Object byte[] 32
+          $dec.Decapsulate($ct, $shared)
+          Write-Host "Decapsulation succeeded (shared secret obtained)."
+          $dec.Dispose()
 
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+          $aesKey = [System.Security.Cryptography.HKDF]::DeriveKey(
+            [System.Security.Cryptography.HashAlgorithmName]::SHA256,
+            $shared,
+            32,
+            $null,
+            $null
+          )
+
+          $aes = [System.Security.Cryptography.AesGcm]::new($aesKey)
+          $plain = New-Object byte[] ($cipherText.Length)
+          $aes.Decrypt($nonce, $cipherText, $tag, $plain, $null)
+          Write-Host "AES-GCM decryption successful (plaintext size: $($plain.Length) bytes)."
+          $aes.Dispose()
+
+          $decrypted7z = Join-Path $decryptDir 'decrypted.7z'
+          [IO.File]::WriteAllBytes($decrypted7z, $plain)
+          Write-Host "Wrote decrypted archive: $decrypted7z"
+
+          $sevenZipExe = "C:\Program Files\7-Zip\7z.exe"
+          if (-not $sevenZipExe) { throw "7z executable not found" }
+
+          if (-not $env:IL2CPPASSEMBLIES7ZIPPASSWORD) { throw "Environment secret IL2CPPASSEMBLIES7ZIPPASSWORD not set." }
+
+          $args = @(
+            'x',
+            '-y',
+            "-p$($env:IL2CPPASSEMBLIES7ZIPPASSWORD)",
+            "-o$($outExtractDir)",
+            $decrypted7z
+          )
+
+          Write-Host "Extracting decrypted archive to: $outExtractDir"
+          $proc = Start-Process -FilePath $sevenZipExe -ArgumentList $args -Wait -NoNewWindow -PassThru
+          if ($proc.ExitCode -ne 0) { throw "7z extraction failed with exit code $($proc.ExitCode)." }
+          Write-Host "Extraction completed successfully."
+          
+          Remove-Item -Path $pk8Path -ErrorAction SilentlyContinue
+          Remove-Item Env:PK8_B64 -ErrorAction SilentlyContinue
+
+          $finalPath = Join-Path $env:LIBSDIRPATH "MelonLoader" "Il2CppAssemblies"
+          New-Item $finalPath -ItemType Directory -Force
+          Move-Item -Path "$($outExtractDir)\stuff\*" -Destination $finalPath -Force -ErrorAction Stop
+
+          Set-Location ..
+          Remove-Item $unpackDir -Recurse -Force
+          Remove-Item $assemblyParent -Recurse -Force
+          Remove-Item $outExtractDir -Recurse -Force
+
+      - name: Setup .NET SDK 6.0
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '6.0.x'
         
@@ -281,7 +385,7 @@ jobs:
       #     dotnet workload clean
 
       - name: Build
-        run: dotnet build --configuration Release --no-self-contained -o "Fontifier\bin\Release" /p:LIBSDIRPATH=${{ env.LIBSDIRPATH }}
+        run: dotnet build --configuration Release --no-self-contained -o "${{ vars.DLLNAME_NO_EXT }}\bin\Release" /p:LIBSDIRPATH=${{ env.LIBSDIRPATH }}
       
       - name: Test
         run: dotnet test --configuration Release --no-build --no-restore --verbosity normal /p:LIBSDIRPATH=${{ env.LIBSDIRPATH }}
@@ -290,62 +394,55 @@ jobs:
         if: ${{ env.DLLVERSION != '' }}
         shell: pwsh
         run: |
-          $binPath = "Fontifier\bin\Release"
-          New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\Mods | Out-Null
-          Move-Item -Path $binPath\Fontifier.dll -Destination $binPath\artifactsetup\Mods
-          New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\UserLibs | Out-Null
-          Move-Item -Path (Get-ChildItem "$env:UserProfile\.nuget\packages\sixlabors.fonts\" | Where-Object { $_.PSIsContainer } | Sort-Object Name -Descending | Select-Object -First 1 | Get-ChildItem -Recurse | Where-Object { -not $_.PSIsContainer -and $_.Name -eq "SixLabors.Fonts.dll" }).FullName -Destination $binPath\artifactsetup\UserLibs
-          New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\UserData\Fontifier\fonts | Out-Null
-          Invoke-WebRequest -Uri https://drive.google.com/uc?id=10koiaqNuqS5EzcA5TqMzhGA8Gl1thTNz -OutFile $binPath\artifactsetup\UserData\Fontifier\fonts\CRUMBLE.otf
-          $RumbleModUIVersion = jq -r '.dependencies[1] | split("-")[2]' manifest.json
-          Write-Output "RumbleModUIVersion=$RumbleModUIVersion"
-          $SchemaVersion=$(awk -F'"' '/ModSchemaVer *= *"/ {ver=$2} END {print ver}' Fontifier/Fontifier.cs)
-          Write-Output "SchemaVersion=$SchemaVersion"
-          Set-Content -Path "$binPath\artifactsetup\UserData\Fontifier\Settings.txt" -Value @(
-            "Fontifier $SchemaVersion"
-            "Created by: $RumbleModUIVersion"
-            "HealthDisplayWithFont: CRUMBLE"
-          )
+          $ErrorActionPreference = 'Stop'
+          $binPath = "${{ vars.DLLNAME_NO_EXT }}\bin\Release"
+          New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\Mods
+          Move-Item -Path $binPath\${{ vars.DLLNAME_NO_EXT }}.dll -Destination $binPath\artifactsetup\Mods
           Copy-Item -Path CHANGELOG.md -Destination $binPath\artifactsetup
           Copy-Item -Path README.md -Destination $binPath\artifactsetup
           Copy-Item -Path icon.png -Destination $binPath\artifactsetup
           Copy-Item -Path LICENSE.txt -Destination $binPath\artifactsetup
-          Copy-Item -Path LICENSE-SixLaborsFonts.txt -Destination $binPath\artifactsetup
-          Copy-Item -Path LICENSE-GOODDOGP.txt -Destination $binPath\artifactsetup
           Copy-Item -Path manifest.json -Destination $binPath\artifactsetup
           Write-Output "BINPATH=$binPath" >> $env:GITHUB_ENV
           ls -R $binPath\artifactsetup
 
       - name: Upload build artifact
         if: ${{ env.DLLVERSION != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-         name: ninjaguardian-Fontifier-${{ env.DLLVERSION }}
+         name: ninjaguardian-${{ vars.DLLNAME_NO_EXT }}-${{ env.DLLVERSION }}
          path: ${{ env.BINPATH }}\artifactsetup
 
   release:
     needs: [check, build]
     runs-on: ubuntu-latest
+    environment: publish
+    permissions:
+      contents: write
     env:
       DLLVERSION: ${{ needs.check.outputs.dllversion }}
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: CHANGELOG.md
 
       - name: Download build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
-          name: ninjaguardian-Fontifier-${{ env.DLLVERSION }}
+          name: ninjaguardian-${{ vars.DLLNAME_NO_EXT }}-${{ env.DLLVERSION }}
           path: artifact-download
 
       - name: Zip artifact
         shell: pwsh
         run: |
-          Compress-Archive -Path artifact-download\* -DestinationPath ninjaguardian-Fontifier-${{ env.DLLVERSION }}.zip
+          $ErrorActionPreference = 'Stop'
+          Compress-Archive -Path artifact-download\* -DestinationPath ninjaguardian-${{ vars.DLLNAME_NO_EXT }}-${{ env.DLLVERSION }}.zip
 
       - name: Extract changelog for release
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $version = "v${{ env.DLLVERSION }}"
           $lines = Get-Content CHANGELOG.md
 
@@ -385,7 +482,5 @@ jobs:
       - name: Create GitHub Release and upload artifact
         uses: softprops/action-gh-release@v2
         with:
-          files: ninjaguardian-Fontifier-${{ env.DLLVERSION }}.zip
+          files: ninjaguardian-${{ vars.DLLNAME_NO_EXT }}-${{ env.DLLVERSION }}.zip
           body: ${{ env.body }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -19,33 +19,35 @@
 		<VersionPrefix>1.1.4</VersionPrefix>
 		<AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
 		<FileVersion>$(VersionPrefix).0</FileVersion>
+		<PackageIcon>icon.png</PackageIcon>
 		<Platform>x64</Platform>
 		<Platforms>x64</Platforms>
 		<PlatformTarget>x64</PlatformTarget>
 		<Prefer32Bit>False</Prefer32Bit>
 		<PackageProjectUrl>https://thunderstore.io/c/rumble/p/ninjaguardian/Fontifier</PackageProjectUrl>
 		<SelfContained>false</SelfContained>
+		<Optimize>True</Optimize>
+		<WarningLevel>9999</WarningLevel>
+		<IsPublishable>False</IsPublishable>
+		<Configurations>Debug;Release;ReleaseAndSave</Configurations>
 
 		<LibsDirPath>$(LIBSDIRPATH)</LibsDirPath>
 		<LibsDirPath Condition="'$(LibsDirPath)'==''">C:\Program Files (x86)\Steam\steamapps\common\RUMBLE</LibsDirPath>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-		<WarningLevel>9999</WarningLevel>
-		<IsPublishable>False</IsPublishable>
+	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
 		<StartAction>Program</StartAction>
 		<StartProgram>$(LIBSDIRPATH)\RUMBLE.exe</StartProgram>
 		<StartWorkingDirectory>$(LIBSDIRPATH)</StartWorkingDirectory>
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>full</DebugType>
+		<DefineConstants>DEBUG</DefineConstants>
+		<Optimize>False</Optimize>
 	</PropertyGroup>
 
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)'=='Debug' Or '$(Configuration)'=='ReleaseAndSave'">
 		<Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;$(LIBSDIRPATH)\Mods\&quot;" />
 	</Target>
-
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-		<WarningLevel>9999</WarningLevel>
-		<IsPublishable>False</IsPublishable>
-	</PropertyGroup>
 
 	<ItemGroup>
 		<None Include="..\icon.png">
