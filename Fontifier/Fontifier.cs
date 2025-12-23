@@ -12,7 +12,7 @@ using UnityEngine;
 using UnityEngine.TextCore.LowLevel;
 
 // TODO: Make ModUI show what the fonts look like.
-// TODO: Font size changer (especialy for MatchInfo in gym + CRUMBLE)
+// TODO: Font size changer (especially for MatchInfo in gym + CRUMBLE)
 
 #region Assemblies
 [assembly: MelonInfo(typeof(Fontifier.Fontifier), FontifierModInfo.ModName, FontifierModInfo.ModVersion, FontifierModInfo.Author, FontifierModInfo.DownloadLink)]
@@ -297,10 +297,10 @@ namespace Fontifier
 
         private void OnUIInitialized()
         {
-            ModUI.ModName = "Fontifier";
+            ModUI.ModName = FontifierModInfo.ModName;
             ModUI.ModVersion = FontifierModInfo.ModVersion;
             ModUI.ModFormatVersion = FontifierModInfo.ModSchemaVer;
-            ModUI.SetFolder("Fontifier");
+            ModUI.SetFolder(FontifierModInfo.ModName);
             ModUI.AddDescriptionAtStart("Description", "", "Lets you change the font for other mods.", new Tags { IsSummary = true });
 
             #region Load Fonts

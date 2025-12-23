@@ -1,3 +1,4 @@
+# NOTE: This contains Fontifier only code (check for "NOTE: Fontifier only")
 name: Build, Release, and Version Check
 
 permissions:
@@ -398,6 +399,21 @@ jobs:
           $binPath = "${{ vars.DLLNAME_NO_EXT }}\bin\Release"
           New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\Mods
           Move-Item -Path $binPath\${{ vars.DLLNAME_NO_EXT }}.dll -Destination $binPath\artifactsetup\Mods
+          # NOTE: Fontifier only stuff
+          New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\UserLibs
+          New-Item -ItemType Directory -Force -Path $binPath\artifactsetup\UserData\Fontifier\fonts
+          Move-Item -Path (Get-ChildItem "$env:UserProfile\.nuget\packages\sixlabors.fonts\" | Where-Object { $_.PSIsContainer } | Sort-Object Name -Descending | Select-Object -First 1 | Get-ChildItem -Recurse | Where-Object { -not $_.PSIsContainer -and $_.Name -eq "SixLabors.Fonts.dll" }).FullName -Destination $binPath\artifactsetup\UserLibs
+          Invoke-WebRequest -Uri https://drive.google.com/uc?id=10koiaqNuqS5EzcA5TqMzhGA8Gl1thTNz -OutFile $binPath\artifactsetup\UserData\Fontifier\fonts\CRUMBLE.otf
+          $SchemaVersion=$(awk -F'"' '/ModSchemaVer *= *"/ {ver=$2} END {print ver}' Fontifier/Fontifier.cs)
+          Write-Output "SchemaVersion=$SchemaVersion"
+          Set-Content -Path "$binPath\artifactsetup\UserData\Fontifier\Settings.txt" -Value @(
+            "Fontifier $SchemaVersion"
+            "Automatically generated from .zip"
+            "HealthDisplayWithFont: CRUMBLE"
+          )
+          Copy-Item -Path LICENSE-SixLaborsFonts.txt -Destination $binPath\artifactsetup
+          Copy-Item -Path LICENSE-GOODDOGP.txt -Destination $binPath\artifactsetup
+          # NOTE: Fontifier only stuff end
           Copy-Item -Path CHANGELOG.md -Destination $binPath\artifactsetup
           Copy-Item -Path README.md -Destination $binPath\artifactsetup
           Copy-Item -Path icon.png -Destination $binPath\artifactsetup
